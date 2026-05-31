@@ -1,10 +1,11 @@
 /**
  * Gomoku (Five in a Row)
  *
- * AI modes by difficulty:
- *   easy   — in-thread greedy heuristic (fast, makes occasional mistakes)
- *   medium — Web Worker, 6-ply alpha-beta minimax with bitboards
- *   hell   — Web Worker, 8-ply alpha-beta minimax with bitboards
+ * - Stone colors are randomly assigned each game (Black always goes first)
+ * - AI modes by difficulty:
+ *     easy   — in-thread greedy heuristic
+ *     medium — Web Worker, 6-ply alpha-beta minimax
+ *     hell   — Web Worker, 8-ply alpha-beta minimax
  */
 const GomokuGame = {
   id: "gomoku",
@@ -19,16 +20,27 @@ const GomokuGame = {
     container.innerHTML = "";
     container.appendChild(mountEl);
 
-    // ── Board state ──────────────────────────────────────────────────────
-    // 0 = empty, 1 = player (black), 2 = AI (white)
+    // ── Random color assignment ───────────────────────────────────────────
+    // board values: 0=empty, 1=black, 2=white
+    // Black always moves first; if player is white, AI (black) goes first
+    const playerIsBlack  = Math.random() < 0.5;
+    const playerStone    = playerIsBlack ? 1 : 2;
+    const aiStone        = playerIsBlack ? 2 : 1;
+    const playerColor    = playerIsBlack ? "Black" : "White";
+    const aiColor        = playerIsBlack ? "white" : "black";   // for Worker
+    const playerWorkerColor = playerIsBlack ? "black" : "white";
+
+    // ── Board state ───────────────────────────────────────────────────────
     const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    let playerTurn = true;
-    let over = false;
+    let playerTurn = playerIsBlack; // black moves first
+    let over       = false;
     let aiThinking = false;
     let playerScore = 0;
-    let aiScore = 0;
+    let aiScore     = 0;
 
-    // ── Win checker ──────────────────────────────────────────────────────
+    // ── Win checker (fixed: removed erroneous -1) ─────────────────────────
+    // countLine: count consecutive stones of 'who' starting at (r,c) in direction (dr,dc), including (r,c) itself
+    // checkWin: sum of both directions = actual consecutive count → win if >= 5
     const countLine = (r, c, dr, dc, who) => {
       let n = 0, rr = r, cc = c;
       while (rr >= 0 && rr < SIZE && cc >= 0 && cc < SIZE && board[rr][cc] === who) {
@@ -38,7 +50,7 @@ const GomokuGame = {
     };
     const checkWin = (r, c, who) =>
       [[0,1],[1,0],[1,1],[1,-1]].some(([dr, dc]) =>
-        countLine(r, c, dr, dc, who) + countLine(r - dr, c - dc, -dr, -dc, who) - 1 >= 5
+        countLine(r, c, dr, dc, who) + countLine(r - dr, c - dc, -dr, -dc, who) >= 5
       );
 
     // ── Board → bitboards (for Worker) ───────────────────────────────────
@@ -48,20 +60,22 @@ const GomokuGame = {
         for (let c = 0; c < SIZE; c++) {
           const pos = r * SIZE + c;
           const slot = pos >> 5, bit = pos & 31;
-          if (board[r][c] === 1) bb[slot] |= 1 << bit;
-          else if (board[r][c] === 2) wb[slot] |= 1 << bit;
+          if (board[r][c] === 1) bb[slot] |= 1 << bit;      // black
+          else if (board[r][c] === 2) wb[slot] |= 1 << bit; // white
         }
       }
       return { blackBitboard: bb, whiteBitboard: wb };
     };
 
     // ── Easy AI: in-thread greedy heuristic ──────────────────────────────
+    // scoreCell: returns the max consecutive length when 'who' is placed at (r,c)
+    // (fixed: -1 removed, so 5-in-a-row correctly returns 5)
     const scoreCell = (r, c, who) => {
       if (board[r][c]) return -1;
       board[r][c] = who;
       let best = 0;
       [[0,1],[1,0],[1,1],[1,-1]].forEach(([dr, dc]) => {
-        const n = countLine(r, c, dr, dc, who) + countLine(r-dr, c-dc, -dr, -dc, who) - 1;
+        const n = countLine(r, c, dr, dc, who) + countLine(r-dr, c-dc, -dr, -dc, who);
         best = Math.max(best, n);
       });
       board[r][c] = 0;
@@ -74,11 +88,11 @@ const GomokuGame = {
         for (let c = 0; c < SIZE; c++) {
           if (board[r][c]) continue;
           // Win immediately
-          if (scoreCell(r, c, 2) >= 4) { picks = [[r, c]]; best = 999; break; }
-          // Block player win
-          if (scoreCell(r, c, 1) >= 4) { picks = [[r, c]]; best = 998; break; }
-          let s = scoreCell(r, c, 2) * 14 + scoreCell(r, c, 1) * 12;
-          s *= (0.6 + Math.random() * 0.4); // easy: add noise
+          if (scoreCell(r, c, aiStone) >= 5)     { picks = [[r, c]]; best = 999; break; }
+          // Block opponent win
+          if (scoreCell(r, c, playerStone) >= 5) { picks = [[r, c]]; best = 998; break; }
+          let s = scoreCell(r, c, aiStone) * 14 + scoreCell(r, c, playerStone) * 12;
+          s *= (0.6 + Math.random() * 0.4);
           if (s > best) { best = s; picks = [[r, c]]; }
           else if (s === best) picks.push([r, c]);
         }
@@ -89,11 +103,11 @@ const GomokuGame = {
       placeAI(r, c);
     };
 
-    // ── Place AI stone and check win ──────────────────────────────────────
+    // ── Place AI stone ────────────────────────────────────────────────────
     const placeAI = (r, c) => {
-      board[r][c] = 2;
+      board[r][c] = aiStone;
       aiThinking = false;
-      if (checkWin(r, c, 2)) {
+      if (checkWin(r, c, aiStone)) {
         over = true;
         aiScore = 1;
         ctx.onScore(playerScore, aiScore);
@@ -103,11 +117,10 @@ const GomokuGame = {
       playerTurn = true;
     };
 
-    // ── Worker AI (medium / hell) ─────────────────────────────────────────
+    // ── Worker AI (medium / hell) ──────────────────────────────────────────
     let worker = null;
     if (difficulty !== "easy") {
       worker = new Worker("/js/gomoku-ai-worker.js");
-      const workerDiff = difficulty === "hell" ? "hard" : "medium";
 
       worker.onmessage = (e) => {
         if (over) return;
@@ -123,7 +136,6 @@ const GomokuGame = {
         playerTurn = true;
       };
 
-      // Notify worker of new game
       worker.postMessage({ type: "NEW_GAME" });
     }
 
@@ -132,9 +144,12 @@ const GomokuGame = {
       const { blackBitboard, whiteBitboard } = board2Bitboards();
       worker.postMessage({
         type: "FIND_BEST_MOVE",
-        data: { blackBitboard, whiteBitboard,
-                computerPlayer: "white", humanPlayer: "black",
-                difficulty: workerDiff },
+        data: {
+          blackBitboard, whiteBitboard,
+          computerPlayer: aiColor,
+          humanPlayer:    playerWorkerColor,
+          difficulty:     workerDiff,
+        },
       });
     };
 
@@ -143,84 +158,81 @@ const GomokuGame = {
       aiThinking = true;
       playerTurn = false;
       if (difficulty === "easy") {
-        // small delay so the move feels natural
         setTimeout(easyAiMove, 160 + Math.random() * 100);
       } else {
-        // Worker is async — placeAI called in worker.onmessage
         setTimeout(workerAiMove, 50);
       }
     };
+
+    // If player is white, AI (black) moves first
+    if (!playerIsBlack) {
+      setTimeout(triggerAI, 400);
+    }
 
     // ── p5.js rendering ───────────────────────────────────────────────────
     this._p5 = new p5((p) => {
       const pad = 28, cell = 26;
       const boardPx = pad * 2 + cell * (SIZE - 1);
-
-      // dot positions (gomoku star points on 15×15)
       const STARS = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
 
       p.setup = () => {
-        p.createCanvas(boardPx, boardPx + 24).parent(mountEl);
+        p.createCanvas(boardPx, boardPx + 28).parent(mountEl);
         p.textFont("Segoe UI, sans-serif");
       };
 
       p.draw = () => {
-        // Board background
         p.background(222, 184, 135);
 
         // Grid lines
-        p.stroke(101, 67, 33);
-        p.strokeWeight(1);
+        p.stroke(101, 67, 33); p.strokeWeight(1);
         for (let i = 0; i < SIZE; i++) {
-          p.line(pad, pad + i * cell, pad + (SIZE - 1) * cell, pad + i * cell);
-          p.line(pad + i * cell, pad, pad + i * cell, pad + (SIZE - 1) * cell);
+          p.line(pad, pad + i * cell, pad + (SIZE-1)*cell, pad + i*cell);
+          p.line(pad + i*cell, pad, pad + i*cell, pad + (SIZE-1)*cell);
         }
 
         // Star points
-        p.noStroke();
-        p.fill(60, 30, 10);
-        STARS.forEach(([r, c]) => p.circle(pad + c * cell, pad + r * cell, 5));
+        p.noStroke(); p.fill(60, 30, 10);
+        STARS.forEach(([r, c]) => p.circle(pad + c*cell, pad + r*cell, 5));
 
-        // Stones
+        // Stones (board[r][c]=1 → black, =2 → white)
         for (let r = 0; r < SIZE; r++) {
           for (let c = 0; c < SIZE; c++) {
             if (!board[r][c]) continue;
+            const x = pad + c * cell, y = pad + r * cell;
             if (board[r][c] === 1) {
-              // Player: black with radial gradient-like shadow
-              p.fill(30, 30, 30);
+              // Black stone
               p.noStroke();
-              p.circle(pad + c * cell, pad + r * cell, 21);
-              p.fill(80, 80, 80);
-              p.circle(pad + c * cell - 3, pad + r * cell - 3, 7);
+              p.fill(25, 25, 25);
+              p.circle(x, y, 22);
+              p.fill(90, 90, 90);
+              p.circle(x - 4, y - 4, 7);
             } else {
-              // AI: white stone
-              p.stroke(80);
-              p.strokeWeight(1);
-              p.fill(235, 235, 220);
-              p.circle(pad + c * cell, pad + r * cell, 21);
+              // White stone
+              p.stroke(100); p.strokeWeight(1);
+              p.fill(238, 235, 215);
+              p.circle(x, y, 22);
               p.noStroke();
               p.fill(255);
-              p.circle(pad + c * cell - 3, pad + r * cell - 3, 7);
+              p.circle(x - 4, y - 4, 7);
             }
           }
         }
 
         // Status bar
-        p.noStroke();
-        p.fill(50);
-        p.textSize(12);
-        p.textAlign(p.CENTER);
+        p.noStroke(); p.textSize(12); p.textAlign(p.CENTER);
         if (over) {
           p.fill(200, 50, 50);
           p.text(aiScore ? "AI wins!" : "You win!", boardPx / 2, boardPx + 16);
         } else if (aiThinking) {
           p.fill(40, 120, 200);
-          // Animated dots
           const dots = ".".repeat(1 + Math.floor(p.frameCount / 15) % 3);
           p.text("AI thinking" + dots, boardPx / 2, boardPx + 16);
-        } else {
+        } else if (playerTurn) {
           p.fill(60);
-          p.text("Your turn — click to place stone (Black)", boardPx / 2, boardPx + 16);
+          p.text(`Your turn — click to place stone (${playerColor})`, boardPx / 2, boardPx + 16);
+        } else {
+          p.fill(100);
+          p.text("Waiting...", boardPx / 2, boardPx + 16);
         }
       };
 
@@ -230,8 +242,8 @@ const GomokuGame = {
         const r = Math.round((p.mouseY - pad) / cell);
         if (r < 0 || r >= SIZE || c < 0 || c >= SIZE || board[r][c]) return;
 
-        board[r][c] = 1;
-        if (checkWin(r, c, 1)) {
+        board[r][c] = playerStone;
+        if (checkWin(r, c, playerStone)) {
           over = true;
           playerScore = 1;
           ctx.onScore(playerScore, aiScore);

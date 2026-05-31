@@ -176,10 +176,16 @@ function mountDualSI(container, ctx, aiController) {
         const ctrl = makeRandomCtrl();
         g2._aiInput = () => ctrl();
     } else if (aiController) {
+        // Throttle: decide every 8 frames (~133 ms at 60 fps)
+        let siFrame = 0;
+        let siLastCtrl = null;
         g2._aiInput = (state) => {
+            siFrame = (siFrame + 1) % 8;
+            if (siFrame !== 0) return siLastCtrl;
             const obs = buildSIObs(state, g2);
-            if (!obs) return null;
-            return decodeSIAction(aiController.predict(obs));
+            if (!obs) return siLastCtrl;
+            siLastCtrl = decodeSIAction(aiController.predict(obs));
+            return siLastCtrl;
         };
     }
 

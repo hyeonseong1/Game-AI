@@ -260,6 +260,11 @@ const BoxingGame = (function () {
     let aiTargetX    = ai.x, aiTargetY = ai.y;
     const ruleCfg = { reactionMs: 500, speed: 1.8, punchChance: 0.022, mistakeRate: 0.25 };
 
+    // PPO AI throttle state
+    let ppoDt = 0;
+    let ppoVx = 0, ppoVy = 0, ppoPunchPending = false;
+    const PPO_INTERVAL = difficulty === 'hell' ? 160 : 220; // ms between decisions
+
     // ── Input ──────────────────────────────────────────────────────────────
     function onKey(e, down) {
       keys[e.code] = down;
@@ -338,16 +343,27 @@ const BoxingGame = (function () {
       }
     }
 
-    // PPO inference (medium / hell)
-    function aiInputPPO() {
+    // PPO inference (medium / hell) — throttled to PPO_INTERVAL ms
+    function aiInputPPO(dt) {
       if (ai.knockedDown) { ai.vx = ai.vy = 0; return; }
-      const obs    = buildObs(ai, player, timeLeft);
-      const action = aiMode.agent.predict(obs);
-      const { vx, vy, punch } = decodeAction(action);
-      ai.vx = vx; ai.vy = vy;
+
+      ppoDt += dt;
+      if (ppoDt >= PPO_INTERVAL) {
+        ppoDt = 0;
+        const obs    = buildObs(ai, player, timeLeft);
+        const action = aiMode.agent.predict(obs);
+        const decoded = decodeAction(action);
+        ppoVx = decoded.vx;
+        ppoVy = decoded.vy;
+        if (decoded.punch) ppoPunchPending = true;
+      }
+
+      ai.vx = ppoVx; ai.vy = ppoVy;
       const angle = Math.atan2(player.y - ai.y, player.x - ai.x);
       ai.faceAngle = angle;
-      if (punch && !ai.punching) {
+
+      if (ppoPunchPending && !ai.punching) {
+        ppoPunchPending = false;
         ai.startPunch(angle);
         if (dist(ai, player) <= HIT_RANGE && checkHit(ai, player, (as, ps) => ctx.onScore(ps, as))) {
           hitEffects.push(new HitEffect((ai.x + player.x) / 2, (ai.y + player.y) / 2));

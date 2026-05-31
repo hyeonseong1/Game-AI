@@ -264,9 +264,10 @@ class TetrisEngine {
         this.grounded   = false;
 
         // AI state
-        this._aiTarget  = null;   // target piece (after AI decision)
-        this._aiTimer   = 0;      // frames until next AI move
+        this._aiTarget  = null;
+        this._aiTimer   = 0;
         this._aiDecided = false;
+        this._aiRandCol = null;   // target column for random mode
     }
 
     _spawn() {
@@ -287,6 +288,7 @@ class TetrisEngine {
         this.next    = this._spawn();
         this._aiTarget  = null;
         this._aiDecided = false;
+        this._aiRandCol = null;
 
         if (!this.grid.valid(this.current)) {
             this.over = true;
@@ -301,52 +303,55 @@ class TetrisEngine {
     keyRotate() { if (!this.over) this.current.rotate(this.grid); }
     keyDrop()   { if (!this.over) { while (this.current.moveDown(this.grid)); this._lock(); } }
 
-    // ── AI step ───────────────────────────────────────────────────────
-    _aiStep(dt) {
-        if (this.over) return;
-
+    // ── AI move decisions (rotation + lateral only; dropping via gravity) ──
+    _aiMoveDecide() {
+        // On new piece: compute target once
         if (!this._aiDecided) {
             if (this.aiMode === 'random') {
-                // Random: pick a random rotation + column then hard-drop
+                // Apply random rotations immediately (visual consistency)
                 const rot = Math.floor(Math.random() * 4);
-                for (let i = 0; i < rot; i++) this.current.rotateCW();
+                for (let i = 0; i < rot; i++) {
+                    const saved = this.current.cells.map(r => [...r]);
+                    this.current.rotateCW();
+                    if (!this.grid.valid(this.current)) {
+                        this.current.cells = saved; break;
+                    }
+                }
                 const maxCol = COLS - this.current.dimension;
-                this.current.col = Math.floor(Math.random() * (maxCol + 1));
-                if (!this.grid.valid(this.current)) this.current.col = 0;
-                while (this.current.moveDown(this.grid));
-                this._lock();
-                return;
+                this._aiRandCol = Math.max(0, Math.floor(Math.random() * (maxCol + 1)));
+            } else {
+                const w = this.aiMode === 'hell' ? WEIGHTS_HELL : WEIGHTS_MEDIUM;
+                const lookahead = this.aiMode === 'hell' ? 2 : 1;
+                const pieces = [this.current, this.next].slice(0, lookahead);
+                const result = aiBest(this.grid, pieces, 0, w);
+                this._aiTarget = result ? result.piece : null;
             }
-            // Heuristic AI: compute target
-            const w = this.aiMode === 'hell' ? WEIGHTS_HELL : WEIGHTS_MEDIUM;
-            const lookahead = this.aiMode === 'hell' ? 2 : 1;
-            const pieces = [this.current, this.next].slice(0, lookahead);
-            const result = aiBest(this.grid, pieces, 0, w);
-            this._aiTarget  = result ? result.piece : null;
             this._aiDecided = true;
             this._aiTimer   = 0;
         }
 
-        if (!this._aiTarget) { this.keyDrop(); return; }
-
-        // Execute moves toward target
-        const moveInterval = this.aiMode === 'hell' ? 1 : 3; // frames between moves
+        // One lateral/rotation move per N frames
+        // easy(random)=8≈133ms, medium=5≈83ms, hell=2≈33ms
+        const interval = this.aiMode === 'hell' ? 2 : this.aiMode === 'medium' ? 5 : 8;
         this._aiTimer++;
-        if (this._aiTimer < moveInterval) return;
+        if (this._aiTimer < interval) return;
         this._aiTimer = 0;
 
-        // Count rotations needed
-        const targetRot = this._computeRotations(this.current, this._aiTarget);
-        if (targetRot > 0) {
-            this.current.rotate(this.grid);
+        if (this.aiMode === 'random') {
+            if      (this.current.col < this._aiRandCol) this.current.moveRight(this.grid);
+            else if (this.current.col > this._aiRandCol) this.current.moveLeft(this.grid);
+            // Aligned → gravity does the rest
             return;
         }
-        // Move horizontally
-        if (this.current.col < this._aiTarget.col) { this.current.moveRight(this.grid); return; }
-        if (this.current.col > this._aiTarget.col) { this.current.moveLeft(this.grid); return; }
-        // Hard drop when aligned
-        while (this.current.moveDown(this.grid));
-        this._lock();
+
+        if (!this._aiTarget) return;
+        const rot = this._computeRotations(this.current, this._aiTarget);
+        if (rot > 0)                                     { this.current.rotate(this.grid); return; }
+        if (this.current.col < this._aiTarget.col)       { this.current.moveRight(this.grid); return; }
+        if (this.current.col > this._aiTarget.col)       { this.current.moveLeft(this.grid); return; }
+        // Hell: hard-drop immediately once aligned
+        if (this.aiMode === 'hell') { while (this.current.moveDown(this.grid)); this._lock(); return; }
+        // medium/random: let gravity handle the drop naturally
     }
 
     _computeRotations(current, target) {
@@ -363,14 +368,16 @@ class TetrisEngine {
     update(dt) {
         if (this.over) return;
 
-        if (this.aiMode) {
-            this._aiStep(dt);
-            return; // AI controls everything; gravity handled by AI decision
-        }
+        // AI makes rotation/lateral decisions (gravity handles dropping)
+        if (this.aiMode) this._aiMoveDecide();
 
-        // Human: apply gravity
+        // Gravity — hell falls fast during positioning; medium/random are more natural
+        const gravMult = this.aiMode === 'hell'   ? 0.15
+                       : this.aiMode === 'medium' ? 0.65
+                       : this.aiMode === 'random' ? 0.80
+                       : 1.0;
         this.dropAcc += dt;
-        const grav = gravityMs(this.level);
+        const grav = gravityMs(this.level) * gravMult;
         while (this.dropAcc >= grav) {
             this.dropAcc -= grav;
             if (!this.current.moveDown(this.grid)) {

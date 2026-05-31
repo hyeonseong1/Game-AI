@@ -1,68 +1,70 @@
 # AI Arena — Web Game Platform
 
-클래식 아케이드 게임 6종을 AI와 실시간으로 대결하는 웹 게임 플랫폼입니다.  
-Pong·Boxing·Space Invaders 세 게임은 **PPO(Proximal Policy Optimization) 강화학습 에이전트**가 탑재되어 있으며, 나머지는 검증된 고전 AI 알고리즘을 사용합니다.
+A web-based platform featuring 6 classic arcade games, each with an AI opponent.
+Pong, Boxing, and Space Invaders use **PPO (Proximal Policy Optimization) reinforcement learning agents**;
+the remaining games use well-established classic AI algorithms.
 
 ---
 
-## 목차
+## Table of Contents
 
-- [주요 기능](#주요-기능)
-- [게임 목록](#게임-목록)
-- [AI 설계](#ai-설계)
-- [프로젝트 구조](#프로젝트-구조)
-- [빠른 시작](#빠른-시작)
-- [RL 모델 재학습](#rl-모델-재학습)
-- [기술 스택](#기술-스택)
-- [크레딧](#크레딧)
-
----
-
-## 주요 기능
-
-| 기능 | 설명 |
-|------|------|
-| **6개 게임** | Pong, Gomoku, Chess, Boxing, Space Invaders, Tetris |
-| **3단계 난이도** | Easy(랜덤/약한 AI) → Medium(중간 체크포인트) → Hell(최강 모델) |
-| **PPO 강화학습** | Pong·Boxing·Space Invaders에 학습된 신경망 AI 내장 |
-| **듀얼스크린 대결** | Space Invaders·Tetris는 인간(좌)과 AI(우)가 나란히 동시 플레이 |
-| **브라우저 추론** | RL 모델을 JSON으로 변환해 Python 서버 없이 브라우저에서 직접 추론 |
-| **리더보드** | 게임별·난이도별 점수 기록 (JSON DB) |
-| **커뮤니티** | 게시글, 좋아요, 댓글 |
-| **게스트 로그인** | 회원가입 없이 즉시 플레이 |
+- [Features](#features)
+- [Games](#games)
+- [AI Design](#ai-design)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Retraining RL Models](#retraining-rl-models)
+- [Tech Stack](#tech-stack)
+- [Credits](#credits)
 
 ---
 
-## 게임 목록
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **6 games** | Pong, Gomoku, Chess, Boxing, Space Invaders, Tetris |
+| **3 difficulty levels** | Easy (random/weak AI) → Medium (mid checkpoint) → Hell (best model) |
+| **PPO reinforcement learning** | Trained neural network AI built into Pong, Boxing, and Space Invaders |
+| **Dual-screen battles** | Space Invaders and Tetris run human (left) vs AI (right) simultaneously |
+| **In-browser inference** | RL models exported as JSON — no Python server needed at runtime |
+| **Leaderboard** | Per-game, per-difficulty score tracking (JSON DB) |
+| **Community** | Posts, likes, comments |
+| **Guest login** | Play instantly without signing up |
+
+---
+
+## Games
 
 ### 1. Pong (Atari, 1972)
-클래식 탁구 게임. 플레이어가 왼쪽 패들, AI가 오른쪽 패들을 조작합니다.
+Classic table tennis. Player controls the left paddle; AI controls the right.
 
-- **조작**: `W`/`S` 또는 `↑`/`↓`
-- **승리 조건**: 11점 먼저 달성
-- **AI**: PPO 신경망 (obs 6차원, act 3개)
-  - Easy: 랜덤 정책
-  - Medium: `pong_mid.json` (step 501,760 체크포인트)
+- **Controls**: `W`/`S` or `↑`/`↓`
+- **Win condition**: First to 11 points
+- **AI**: PPO neural network (obs: 6-dim, actions: 3)
+  - Easy: random policy
+  - Medium: `pong_mid.json` (checkpoint at step 501,760)
   - Hell: `pong_best.json` (best reward, step 665,600)
 
 ---
 
-### 2. Gomoku (오목, 15×15)
-15×15 바둑판에서 5목을 먼저 만들면 승리합니다.
+### 2. Gomoku (15×15)
+Place 5 stones in a row to win on a 15×15 board. Stone color is randomly assigned each game.
 
-- **조작**: 클릭으로 돌 배치
-- **승리 조건**: 가로·세로·대각선 5개 연속
-- **AI**: 비트보드 기반 Alpha-Beta Minimax (Web Worker)
-  - Easy: 그리디 휴리스틱 (즉시 응답)
-  - Medium: 6-ply 미니맥스
-  - Hell: 8-ply 미니맥스
+- **Controls**: Click to place a stone
+- **Win condition**: 5 in a row (horizontal, vertical, or diagonal)
+- **Color**: Randomly assigned — if you are White, AI (Black) moves first
+- **AI**: Bitboard-based Alpha-Beta Minimax (Web Worker)
+  - Easy: greedy heuristic (instant)
+  - Medium: 6-ply minimax
+  - Hell: 8-ply minimax
 
 ---
 
 ### 3. Chess
-Stockfish 18 WASM 체스 엔진을 사용합니다. 플레이어는 흰색(선수)입니다.
+Powered by the Stockfish 18 WASM engine. You play as White.
 
-- **조작**: 기물 드래그 앤 드롭
+- **Controls**: Drag and drop pieces
 - **AI**: [Stockfish 18](https://github.com/nmrugg/stockfish.js) (Lite Single-threaded WASM, 7 MB)
   - Easy: Skill Level 3, depth 2
   - Medium: Skill Level 10, depth 8
@@ -70,119 +72,119 @@ Stockfish 18 WASM 체스 엔진을 사용합니다. 플레이어는 흰색(선�
 
 ---
 
-### 4. Boxing (탑뷰 캔버스)
-링 위에서 두 복서가 이동하고 펀치를 날리는 게임. 플레이어는 흰색(좌측)입니다.
+### 4. Boxing (top-view canvas)
+Two boxers move and punch in a ring. You are the white boxer on the left.
 
-- **조작**: `WASD`/화살표(이동), `K`/`L`/`Space`(펀치)
-- **승리 조건**: 100점 먼저 달성 또는 2분 후 높은 점수
-- **AI**: PPO 신경망 (obs 14차원, act 18개)
-  - Easy: 랜덤 정책
+- **Controls**: `WASD`/arrows (move), `K`/`L`/`Space` (punch)
+- **Win condition**: First to 100 points, or higher score after 2 minutes
+- **AI**: PPO neural network (obs: 14-dim, actions: 18)
+  - Easy: random policy
   - Medium: `boxing_mid.json` (step 501,760)
   - Hell: `boxing_best.json` (best reward, step 342,016)
 
 ---
 
-### 5. Space Invaders (Taito, 1978) — **듀얼스크린**
-두 화면이 나란히 표시됩니다. 왼쪽은 플레이어, 오른쪽은 AI가 조종합니다.
+### 5. Space Invaders (Taito, 1978) — **Dual-Screen**
+Two game canvases run side by side. Left is the human player; right is the AI.
 
 ```
 ┌──────────────────┬────┬──────────────────┐
 │ 🎮 You (Player 1)│ VS │ 🤖 AI (Player 2) │
-│   키보드 조작     │    │   PPO 에이전트    │
+│   keyboard       │    │   PPO agent       │
 └──────────────────┴────┴──────────────────┘
 ```
 
-- **조작**: `←`/`→`(이동), `Space`(발사) — 왼쪽 화면만
-- **AI**: PPO 신경망 (obs 20차원, act 6개)
-  - Easy: 랜덤 정책
+- **Controls**: `←`/`→` (move), `Space` (fire) — left screen only
+- **AI**: PPO neural network (obs: 20-dim, actions: 6)
+  - Easy: random policy
   - Medium: `si_mid.json` (step 751,616)
   - Hell: `si_best.json` (best reward, step 1,433,600)
 
 ---
 
-### 6. Tetris — **듀얼스크린**
-두 화면이 나란히 표시됩니다. 왼쪽은 플레이어, 오른쪽은 AI가 자동으로 플레이합니다.
+### 6. Tetris — **Dual-Screen**
+Two game canvases run side by side. Left is the human player; right is the AI.
 
 ```
 ┌──────────────────┬────┬──────────────────┐
 │ 🎮 You (Player 1)│ VS │ 🤖 AI (Player 2) │
-│   키보드 조작     │    │  휴리스틱 AI      │
+│   keyboard       │    │   heuristic AI    │
 └──────────────────┴────┴──────────────────┘
 ```
 
-- **조작**: `←`/`→`(이동), `↑`/`Z`(회전), `↓`(소프트드롭), `Space`(하드드롭) — 왼쪽 화면만
-- **AI**: 4-가중치 휴리스틱 평가 함수 ([tetrisai](https://github.com/LeeYiyuan/tetrisai) 포팅)
-  - Easy: 랜덤 배치
-  - Medium: 1-피스 룩어헤드
-  - Hell: 2-피스 룩어헤드 (유전 알고리즘으로 튜닝된 가중치)
+- **Controls**: `←`/`→` (move), `↑`/`Z` (rotate), `↓` (soft drop), `Space` (hard drop) — left screen only
+- **AI**: 4-weight heuristic evaluation ([tetrisai](https://github.com/LeeYiyuan/tetrisai) port)
+  - Easy: random placement
+  - Medium: 1-piece lookahead
+  - Hell: 2-piece lookahead (genetically tuned weights) + instant hard drop on alignment
 
 ---
 
-## AI 설계
+## AI Design
 
-### PPO 강화학습 (Pong · Boxing · Space Invaders)
+### PPO Reinforcement Learning (Pong · Boxing · Space Invaders)
 
-세 게임의 AI는 동일한 **ActorCritic PPO** 아키텍처를 공유합니다.
+All three games share the same **ActorCritic PPO** architecture.
 
-#### 신경망 구조
+#### Network Architecture
 
 ```
-입력 (obs_dim)
+Input (obs_dim)
     │
-Linear → Tanh           256 노드
+Linear → Tanh           256 nodes
     │
-Linear → Tanh           256 노드
+Linear → Tanh           256 nodes
     │
-Actor Head              act_dim 노드 (Categorical 분포)
-Critic Head             1 노드 (상태가치)
+Actor Head              act_dim nodes (Categorical distribution)
+Critic Head             1 node (state value)
 ```
 
-#### 게임별 관측·행동 공간
+#### Observation and Action Spaces
 
-| 게임 | obs_dim | act_dim | 관측 내용 | 행동 |
-|------|---------|---------|-----------|------|
-| Pong | 6 | 3 | 공 위치·속도, 양쪽 패들 위치 | stay / up / down |
-| Boxing | 14 | 18 | 두 복서 위치·점수·펀치·다운 상태, 남은 시간 | 9방향이동 × 펀치여부 |
-| Space Invaders | 20 | 6 | 플레이어 위치·총알, 에일리언 대형, 폭탄 3개, 타깃 힌트 | stay·left·right × 발사여부 |
+| Game | obs_dim | act_dim | Observations | Actions |
+|------|---------|---------|-------------|---------|
+| Pong | 6 | 3 | Ball position & velocity, both paddle positions | stay / up / down |
+| Boxing | 14 | 18 | Both boxer positions, scores, punch/knockdown timers, time remaining | 9 directions × punch toggle |
+| Space Invaders | 20 | 6 | Player position & bullet, alien formation, 3 bombs, aiming hint, wave & lives | stay·left·right × fire toggle |
 
-#### 학습 결과
+#### Training Results
 
-| 게임 | 총 스텝 | 최고 avg-50 리워드 | mid 체크포인트 |
-|------|---------|-------------------|----------------|
+| Game | Total Steps | Best avg-50 reward | Mid checkpoint |
+|------|-------------|-------------------|----------------|
 | Pong | 1,000,000 | +8.04 | step 501,760 |
 | Boxing | 1,000,000 | +114.156 | step 501,760 |
 | Space Invaders | 1,500,000 | +50.47 | step 751,616 |
 
-#### 브라우저 추론 방식
+#### In-Browser Inference
 
-Python·PyTorch 없이 브라우저에서 바로 실행됩니다.
+No Python or PyTorch required at runtime — inference runs entirely in the browser.
 
 ```
-학습 (Python)                     배포 (Browser)
-─────────────────────────────     ──────────────────────────────
-PPO → ppo_agent.py             →  export_weights.py
-      ActorCritic (PyTorch)    →  model.json  (가중치 배열)
-                                →  pong-rl-agent.js (JS 추론)
-                                →  predict(obs) → action
+Training (Python)                      Deployment (Browser)
+─────────────────────────────          ──────────────────────────────
+PPO → ppo_agent.py                 →   export_weights.py
+      ActorCritic (PyTorch)        →   model.json  (weight arrays)
+                                   →   pong-rl-agent.js (JS inference)
+                                   →   predict(obs) → action
 ```
 
-`pong-rl-agent.js`의 `RLAgent` 클래스가 Pong·Boxing·Space Invaders 세 게임 모두에서 재사용됩니다.
+The `RLAgent` class in `pong-rl-agent.js` is reused by all three games (Pong, Boxing, Space Invaders).
 
 ---
 
 ### Gomoku — Alpha-Beta Minimax (Web Worker)
 
 ```
-메인 스레드: 보드 → 비트보드 변환 → Worker 메시지 전송
-Web Worker:  우선순위 탐색 → Alpha-Beta Pruning → 최적 수 반환
+Main thread: board → bitboard conversion → postMessage to Worker
+Web Worker:  priority search → Alpha-Beta Pruning → return best move
 ```
 
-`gomoku-ai-worker.js`는 `gomoku/` 레퍼런스 프로젝트를 자체 포함형(self-contained)으로 포팅한 파일입니다.  
-Medium은 6-ply, Hell은 8-ply로 탐색합니다. AI 계산 중에는 "AI thinking…" 애니메이션이 표시됩니다.
+`gomoku-ai-worker.js` is a self-contained port of the `gomoku/` reference project.
+Medium searches 6 plies; Hell searches 8 plies. An animated "AI thinking…" indicator is shown during computation.
 
 ---
 
-### Chess — Stockfish 18 WASM (UCI 프로토콜)
+### Chess — Stockfish 18 WASM (UCI Protocol)
 
 ```javascript
 engine.postMessage('uci');
@@ -192,81 +194,81 @@ engine.postMessage('go depth 15');
 // → bestmove d7d5
 ```
 
-`stockfish-18-lite-single.js` + `.wasm` (총 ~7.5 MB)을 `/public/` 에 포함해 서빙합니다.  
-CORS 헤더 불필요, 단일 스레드, 모든 모던 브라우저 지원.
+`stockfish-18-lite-single.js` + `.wasm` (~7.5 MB total) are served from `/public/`.
+No CORS headers required; single-threaded; works in all modern browsers.
 
 ---
 
-### Tetris — 4-가중치 휴리스틱 (tetrisai 포팅)
+### Tetris — 4-Weight Heuristic (tetrisai port)
 
 ```
-점수 = -h × aggregateHeight + l × lines - o × holes - b × bumpiness
+score = -h × aggregateHeight + l × lines - o × holes - b × bumpiness
 ```
 
-| 파라미터 | Medium | Hell (유전 알고리즘 튜닝) |
-|----------|--------|--------------------------|
-| h (높이 페널티) | 0.510 | 0.510 |
-| l (라인 보너스) | 0.600 | 0.761 |
-| o (구멍 페널티) | 0.450 | 0.357 |
-| b (울퉁불퉁 페널티) | 0.300 | 0.184 |
+| Parameter | Medium | Hell (genetically tuned) |
+|-----------|--------|--------------------------|
+| h (height penalty) | 0.510 | 0.510 |
+| l (lines bonus) | 0.600 | 0.761 |
+| o (holes penalty) | 0.450 | 0.357 |
+| b (bumpiness penalty) | 0.300 | 0.184 |
 
-Medium은 현재 피스만(1-piece lookahead), Hell은 현재+다음(2-piece lookahead)으로 탐색합니다.
+Medium uses 1-piece lookahead; Hell uses 2-piece lookahead and hard-drops instantly upon alignment.
 
 ---
 
-## 프로젝트 구조
+## Project Structure
 
 ```
 Game_web/
-├── server.js                    # Node.js HTTP 서버 (API + 정적 파일)
-├── boxing-bridge.js             # Node ↔ Python 브릿지 (구 Boxing용, 레거시)
+├── server.js                    # Node.js HTTP server (API + static files)
+├── boxing-bridge.js             # Node ↔ Python bridge (legacy, unused)
 ├── package.json
 │
-├── public/                      # 웹 프론트엔드
-│   ├── index.html               # 단일 페이지 앱 (SPA)
+├── public/                      # Web frontend
+│   ├── index.html               # Single-page app (SPA)
 │   ├── css/
-│   │   ├── styles.css           # 전체 UI 스타일
-│   │   └── game-icons.css       # 게임 카드 아이콘
+│   │   ├── styles.css
+│   │   └── game-icons.css
 │   ├── js/
-│   │   ├── app.js               # SPA 라우터, 인증, 리더보드
-│   │   ├── ai-config.js         # 난이도 프리셋
-│   │   ├── game-icons.js        # 게임 카드 렌더러
-│   │   ├── pong-rl-agent.js     # 범용 PPO 추론 엔진 (Pong·Boxing·SI 공용)
+│   │   ├── app.js               # SPA router, auth, leaderboard
+│   │   ├── ai-config.js         # Difficulty presets
+│   │   ├── game-icons.js        # Game card renderer
+│   │   ├── pong-rl-agent.js     # Generic PPO inference engine (shared by Pong, Boxing, SI)
 │   │   ├── gomoku-ai-worker.js  # Gomoku Alpha-Beta Worker
 │   │   └── games/
-│   │       ├── canvas-arena.js  # 캔버스 게임 마운트 헬퍼
-│   │       ├── pong-core.js     # Pong 게임 엔진
-│   │       ├── pong.js          # Pong AI 통합 (PPO 3모드)
-│   │       ├── gomoku.js        # Gomoku 게임 + Worker AI
-│   │       ├── chess.js         # Chess + Stockfish UCI 통합
-│   │       ├── boxing.js        # Boxing 게임 엔진 + PPO 통합
-│   │       ├── space-invaders-core.js  # SI 게임 엔진
-│   │       ├── space-invaders.js       # SI 듀얼스크린 + PPO 통합
-│   │       └── tetris.js        # Tetris 듀얼스크린 + 휴리스틱 AI (자체 완결)
-│   ├── models/                  # PPO 가중치 JSON (브라우저 직접 로드)
+│   │       ├── canvas-arena.js  # Canvas game mount helper
+│   │       ├── pong-core.js     # Pong game engine
+│   │       ├── pong.js          # Pong AI integration (3 PPO modes)
+│   │       ├── gomoku.js        # Gomoku game + Worker AI
+│   │       ├── chess.js         # Chess + Stockfish UCI integration
+│   │       ├── boxing.js        # Boxing game engine + PPO integration
+│   │       ├── space-invaders-core.js  # Space Invaders game engine
+│   │       ├── space-invaders.js       # Dual-screen + PPO integration
+│   │       └── tetris.js        # Dual-screen Tetris + heuristic AI (self-contained)
+│   ├── models/                  # PPO weight JSON files (loaded directly by browser)
 │   │   ├── pong_mid.json        # Pong mid  (501,760 steps, 1.5 MB)
 │   │   ├── pong_best.json       # Pong best (665,600 steps, 1.5 MB)
 │   │   ├── boxing_mid.json      # Boxing mid  (501,760 steps, 1.6 MB)
 │   │   ├── boxing_best.json     # Boxing best (342,016 steps, 1.6 MB)
 │   │   ├── si_mid.json          # SI mid  (751,616 steps, 1.5 MB)
 │   │   └── si_best.json         # SI best (1,433,600 steps, 1.5 MB)
-│   ├── stockfish.js             # Stockfish 18 Lite Single (WASM 래퍼)
-│   ├── stockfish.wasm           # Stockfish WASM 바이너리 (7 MB)
-│   └── img/chesspieces/wikipedia/  # 체스 기물 이미지 (로컬, CDN 불필요)
+│   ├── stockfish.js             # Stockfish 18 Lite Single WASM wrapper
+│   ├── stockfish.wasm           # Stockfish WASM binary (7 MB)
+│   └── img/chesspieces/wikipedia/  # Chess piece images (local, no CDN)
 │
-├── pong_rl/                     # Pong RL 학습 패키지
-│   ├── pong_env.py              # 게임 환경 (JS 물리 1:1 재현)
-│   ├── ppo_agent.py             # ActorCritic PPO 에이전트
-│   ├── train.py                 # 학습 스크립트
-│   ├── export_weights.py        # PyTorch → JSON 변환
-│   ├── play.py                  # 학습된 모델 테스트
+├── pong_rl/                     # Pong RL training package
+│   ├── pong_env.py              # Game environment (mirrors JS physics)
+│   ├── ppo_agent.py             # ActorCritic PPO agent
+│   ├── train.py                 # Training script
+│   ├── export_weights.py        # PyTorch → JSON export
+│   ├── play.py                  # Test a trained model
 │   ├── models/
 │   │   ├── mid_model.pt
 │   │   └── best_model.pt
 │   └── requirements.txt
 │
-├── boxing_rl/                   # Boxing RL 학습 패키지
-│   ├── boxing_env.py            # 게임 환경 (JS 물리 1:1 재현)
+├── boxing_rl/                   # Boxing RL training package
+│   ├── boxing_env.py            # Game environment (mirrors JS physics)
 │   ├── ppo_agent.py
 │   ├── train.py
 │   ├── export_weights.py
@@ -274,8 +276,8 @@ Game_web/
 │       ├── mid_model.pt
 │       └── best_model.pt
 │
-├── space_invaders_rl/           # Space Invaders RL 학습 패키지
-│   ├── space_invaders_env.py    # 게임 환경 (JS 물리 1:1 재현)
+├── space_invaders_rl/           # Space Invaders RL training package
+│   ├── space_invaders_env.py    # Game environment (mirrors JS physics)
 │   ├── ppo_agent.py
 │   ├── train.py
 │   ├── export_weights.py
@@ -283,58 +285,58 @@ Game_web/
 │       ├── mid_model.pt
 │       └── best_model.pt
 │
-├── services/boxing/             # (레거시) PettingZoo Boxing 서비스
+├── services/boxing/             # (Legacy) PettingZoo Boxing service — unused
 │   ├── boxing_web_service.py
 │   └── requirements.txt
 │
 ├── data/
-│   └── db.json                  # 리더보드 + 커뮤니티 데이터 (JSON)
+│   └── db.json                  # Leaderboard + community data (JSON)
 │
-└── jstetris/                    # (레거시) iframe Tetris 소스 — 현재 미사용
+└── jstetris/                    # (Legacy) iframe Tetris source — unused
     └── ...
 ```
 
 ---
 
-## 빠른 시작
+## Quick Start
 
-### 요구사항
+### Requirements
 
-| 항목 | 버전 |
-|------|------|
+| Item | Version |
+|------|---------|
 | Node.js | 18+ |
-| Python | 3.10+ (RL 재학습 시에만 필요) |
-| CUDA (선택) | GPU 학습 가속 |
+| Python | 3.10+ (only needed for RL retraining) |
+| CUDA (optional) | GPU training acceleration |
 
-### 설치 및 실행
+### Install and Run
 
 ```bash
-# 1. 의존성 설치
+# 1. Install dependencies
 npm install
 
-# 2. 서버 시작
+# 2. Start the server
 npm start
-# 또는: node server.js
+# or: node server.js
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-> **참고**: 모든 게임은 서버 시작 즉시 플레이 가능합니다.  
-> 체스는 Stockfish WASM(~7 MB)을 첫 플레이 시 로드합니다(약 2~3초).
+> **Note**: All games are playable immediately after starting the server.
+> Chess loads the Stockfish WASM (~7 MB) on first play, which takes about 2–3 seconds.
 
 ---
 
-## RL 모델 재학습
+## Retraining RL Models
 
-PPO 모델을 처음부터 다시 학습시키거나 하이퍼파라미터를 조정할 수 있습니다.
+You can retrain the PPO models from scratch or experiment with hyperparameters.
 
-### Python 환경 설치
+### Python Environment
 
 ```bash
 pip install torch numpy
 ```
 
-GPU가 있으면 자동으로 CUDA를 사용합니다.
+CUDA is used automatically if a compatible GPU is available.
 
 ### Pong
 
@@ -360,24 +362,24 @@ python train.py --steps 1500000 --save-dir models
 python export_weights.py --save-dir models --out-dir ../public/models
 ```
 
-학습이 완료되면 서버를 재시작할 필요 없이 브라우저를 새로고침하면 새 모델이 반영됩니다.
+After training, refresh the browser — no server restart needed.
 
-#### 저장 체크포인트
+#### Checkpoint Saving
 
-| 파일 | 저장 시점 |
+| File | Saved when |
 |------|-----------|
-| `mid_model.pt` | 전체 스텝의 50% 시점 |
-| `best_model.pt` | 최근 50 에피소드 평균 리워드가 역대 최고일 때마다 갱신 |
+| `mid_model.pt` | At the 50% step mark |
+| `best_model.pt` | Whenever the last-50-episode average reward hits a new high |
 
-#### 모델 파일 구조 (JSON)
+#### Model JSON Structure
 
 ```json
 {
-  "shared_0_weight": [[...], ...],   // Linear(obs, 256) 가중치
+  "shared_0_weight": [[...], ...],   // Linear(obs_dim → 256) weights
   "shared_0_bias":   [...],
-  "shared_2_weight": [[...], ...],   // Linear(256, 256) 가중치
+  "shared_2_weight": [[...], ...],   // Linear(256 → 256) weights
   "shared_2_bias":   [...],
-  "actor_weight":    [[...], ...],   // Linear(256, act) 가중치
+  "actor_weight":    [[...], ...],   // Linear(256 → act_dim) weights
   "actor_bias":      [...],
   "meta": { "total_steps": 665600, "updates": 325, "obs_dim": 6, "act_dim": 3 }
 }
@@ -385,62 +387,62 @@ python export_weights.py --save-dir models --out-dir ../public/models
 
 ---
 
-## 기술 스택
+## Tech Stack
 
-### 프론트엔드
+### Frontend
 
-| 기술 | 용도 |
-|------|------|
-| Vanilla JS (ES2020+) | SPA 라우터, 게임 로직 전체 |
-| HTML5 Canvas | Pong, Boxing, Space Invaders, Tetris, Gomoku 렌더링 |
-| Web Workers | Gomoku AI 비동기 탐색 |
-| Fetch API | PPO 모델 JSON 로드, REST API 통신 |
-| chessboard.js + chess.js | 체스 UI 및 룰 검증 (CDN) |
-| p5.js | Gomoku 캔버스 렌더링 (CDN) |
+| Technology | Purpose |
+|-----------|---------|
+| Vanilla JS (ES2020+) | SPA router, all game logic |
+| HTML5 Canvas | Pong, Boxing, Space Invaders, Tetris, Gomoku rendering |
+| Web Workers | Gomoku AI async search |
+| Fetch API | PPO model JSON loading, REST API calls |
+| chessboard.js + chess.js | Chess UI and rule validation (CDN) |
+| p5.js | Gomoku canvas rendering (CDN) |
 
-### 백엔드
+### Backend
 
-| 기술 | 용도 |
-|------|------|
-| Node.js (built-in `http`) | HTTP 서버, 정적 파일 서빙 |
-| JSON 파일 (`data/db.json`) | 리더보드, 커뮤니티 데이터 저장 |
+| Technology | Purpose |
+|-----------|---------|
+| Node.js (built-in `http`) | HTTP server, static file serving |
+| JSON file (`data/db.json`) | Leaderboard and community data storage |
 
 ### AI / ML
 
-| 기술 | 용도 |
-|------|------|
-| PyTorch | PPO 에이전트 학습 |
-| NumPy | 학습 환경 시뮬레이션 |
-| Stockfish 18 WASM | 체스 엔진 (브라우저 내 실행) |
+| Technology | Purpose |
+|-----------|---------|
+| PyTorch | PPO agent training |
+| NumPy | Environment simulation |
+| Stockfish 18 WASM | Chess engine (runs in-browser) |
 
-### API 엔드포인트
+### API Endpoints
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| POST | `/api/auth/signup` | 회원가입 |
-| POST | `/api/auth/login` | 로그인 |
-| POST | `/api/auth/guest` | 게스트 로그인 |
-| GET | `/api/leaderboard?game=&difficulty=` | 리더보드 조회 |
-| POST | `/api/leaderboard` | 점수 등록 |
-| DELETE | `/api/leaderboard` | 리더보드 초기화 |
-| GET | `/api/community/posts` | 게시글 목록 |
-| POST | `/api/community/posts` | 게시글 작성 |
-| POST | `/api/community/posts/:id/like` | 좋아요 토글 |
-| POST | `/api/community/posts/:id/comments` | 댓글 작성 |
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/auth/signup` | Create account |
+| POST | `/api/auth/login` | Log in |
+| POST | `/api/auth/guest` | Guest login |
+| GET | `/api/leaderboard?game=&difficulty=` | Get leaderboard |
+| POST | `/api/leaderboard` | Submit score |
+| DELETE | `/api/leaderboard` | Clear leaderboard |
+| GET | `/api/community/posts` | Get posts |
+| POST | `/api/community/posts` | Create post |
+| POST | `/api/community/posts/:id/like` | Toggle like |
+| POST | `/api/community/posts/:id/comments` | Add comment |
 
 ---
 
-## 크레딧
+## Credits
 
-| 구성요소 | 출처 | 라이선스 |
-|----------|------|---------|
-| Pong 게임 엔진 | [juliensimon/browser-games](https://github.com/juliensimon/browser-games) | MIT |
-| Space Invaders 게임 엔진 | [juliensimon/browser-games](https://github.com/juliensimon/browser-games) | MIT |
-| Tetris AI 가중치·알고리즘 | [LeeYiyuan/tetrisai](https://github.com/LeeYiyuan/tetrisai) | MIT |
-| Gomoku AI Worker | [gomoku/](https://github.com/...) (내부 참조) | — |
+| Component | Source | License |
+|-----------|--------|---------|
+| Pong game engine | [juliensimon/browser-games](https://github.com/juliensimon/browser-games) | MIT |
+| Space Invaders engine | [juliensimon/browser-games](https://github.com/juliensimon/browser-games) | MIT |
+| Tetris AI weights & algorithm | [LeeYiyuan/tetrisai](https://github.com/LeeYiyuan/tetrisai) | MIT |
+| Gomoku AI Worker | internal reference project | — |
 | Stockfish.js | [nmrugg/stockfish.js](https://github.com/nmrugg/stockfish.js) | GPL-3.0 |
 | chess.js | [jhlywa/chess.js](https://github.com/jhlywa/chess.js) | BSD |
 | chessboard.js | [oakmac/chessboardjs](https://github.com/oakmac/chessboardjs) | MIT |
 | p5.js | [processing/p5.js](https://p5js.org/) | LGPL |
 
-원작 아케이드 게임(Pong, Space Invaders 등)의 트레이드마크는 각 권리자에 귀속됩니다.
+The trademarks of the original arcade games (Pong, Space Invaders, etc.) belong to their respective rights holders.

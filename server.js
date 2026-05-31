@@ -4,7 +4,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { URL } = require("url");
 
-// Boxing은 순수 Canvas 게임으로 재구현 — 서버 API 불필요
+// Boxing reimplemented as a pure Canvas game — no server API needed
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, "public");
