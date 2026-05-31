@@ -1,0 +1,55 @@
+/* Colored badge fallback behind emoji (wireframe-style) */
+.game-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 12px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  line-height: 1;
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.game-icon--tetris {
+  background: linear-gradient(145deg, #1d4ed8, #3b82f6);
+  font-size: 0;
+  overflow: hidden;
+}
+
+.game-icon--tetris .game-icon-svg--tetris {
+  width: 52px;
+  height: 52px;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.game-icon--pong {
+  background: linear-gradient(145deg, #22c55e, #4ade80);
+  font-size: 0;
+}
+
+.game-icon--pong .game-icon-svg--pong {
+  width: 52px;
+  height: 52px;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.game-icon--boxing {
+  background: linear-gradient(145deg, #ef4444, #f87171);
+}
+
+.game-icon--space-invaders {
+  background: linear-gradient(145deg, #7c3aed, #a78bfa);
+}
+
+.game-icon--chess {
+  background: linear-gradient(145deg, #a8a8a8, #414141);
+}
+
+.game-icon--gomoku {
+  background: linear-gradient(145deg, #f97316, #fb923c);
+}

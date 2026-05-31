@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tetris</title>
+  <link href="main.css" rel="stylesheet" />
+  <link href="embed.css" rel="stylesheet" />
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+  </style>
+</head>
+<body>
+  <div id="jstetris-root">
+    <div id="main" hidden aria-hidden="true">
+      <p>TETRIS</p>
+      <div class="buttons">
+        <button type="button" onclick="gameStart()">New Game</button>
+        <button type="button" onclick="toggleSettings()">Option</button>
+      </div>
+      <div id="settings" class="settings" hidden>
+        <div class="border">
+          GAME MODE:
+          <button type="button" onclick="settingsButton(0,0)">◀</button>
+          <div id="GAMEMODE_GOALS" class="attribute">NORMAL</div>
+          <button type="button" onclick="settingsButton(0,1)">▶</button>
+          <br />
+          　PLAYERS　:
+          <button type="button" onclick="settingsButton(1,0)">◀</button>
+          <div id="GAMEMODE_PLAYER" class="attribute">1</div>
+          <button type="button" onclick="settingsButton(1,1)">▶</button>
+        </div>
+        <div id="keybinding"></div>
+      </div>
+    </div>
+    <canvas id="field" width="1024" height="768"></canvas>
+    <canvas id="animation" width="1024" height="768"></canvas>
+    <canvas id="infos" width="1024" height="768"></canvas>
+  </div>
+
+  <script src="constants.js"></script>
+  <script src="board.js"></script>
+  <script src="view.js"></script>
+  <script src="Piece.js"></script>
+  <script src="storage.js"></script>
+  <script src="random.js"></script>
+  <script src="player.js"></script>
+  <script src="main.js"></script>
+  <script>
+    init();
+    settings[0] = 0;
+    settings[1] = 0;
+    gameStart();
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+{
+  "users": [],
+  "leaderboard": [
+    {
+      "id": "seed-1",
+      "username": "TetrisPro",
+      "game": "tetris",
+      "difficulty": "hell",
+      "score": 12450,
+      "aiPercent": 100,
+      "createdAt": "2026-05-10T14:30:00.000Z"
+    },
+    {
+      "id": "seed-2",
+      "username": "PongMaster",
+      "game": "pong",
+      "difficulty": "medium",
+      "score": 11,
+      "aiPercent": 76,
+      "createdAt": "2026-05-12T09:15:00.000Z"
+    },
+    {
+      "id": "seed-3",
+      "username": "SpaceAce",
+      "game": "space-invaders",
+      "difficulty": "easy",
+      "score": 3200,
+      "aiPercent": 92,
+      "createdAt": "2026-05-14T18:45:00.000Z"
+    },
+    {
+      "id": "lb-d03f71e672c6",
+      "username": "Guest8636",
+      "game": "space-invaders",
+      "difficulty": "easy",
+      "score": 2400,
+      "aiPercent": 150,
+      "createdAt": "2026-05-17T13:35:46.073Z"
+    },
+    {
+      "id": "lb-7a65454712d8",
+      "username": "Guest8636",
+      "game": "tetris",
+      "difficulty": "easy",
+      "score": 0,
+      "aiPercent": 50,
+      "createdAt": "2026-05-17T13:50:54.540Z"
+    }
+  ],
+  "community": [
+    {
+      "id": "post-1",
+      "username": "TetrisPro",
+      "avatar": "T",
+      "content": "For Tetris Hell difficulty, try to keep your stack flat and save the I-piece for emergencies. The AI clears 4-lines constantly!",
+      "likes": 12,
+      "likedBy": [],
+      "comments": [
+        {
+          "id": "c1",
+          "username": "Guest4335",
+          "content": "Thanks for the tip!"
+        }
+      ],
+      "createdAt": "2026-05-15T10:00:00.000Z"
+    },
+    {
+      "id": "post-2",
+      "username": "PongMaster",
+      "avatar": "P",
+      "content": "Pong medium AI is beatable if you angle your returns toward the corners. Anyone else tried hell mode?",
+      "likes": 8,
+      "likedBy": [],
+      "comments": [],
+      "createdAt": "2026-05-16T08:20:00.000Z"
+    }
+  ]
+}

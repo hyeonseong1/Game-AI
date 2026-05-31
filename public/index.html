@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web Game Programming — AI Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/game-icons.css" />
+</head>
+<body>
+  <!-- Login -->
+  <section id="view-login" class="view">
+    <div class="login-card">
+      <div class="logo-icon">🎮</div>
+      <h1>Web Game Programming</h1>
+      <p class="subtitle">Challenge AI in classic arcade games</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-user">User ID</label>
+          <input type="text" id="login-user" placeholder="Enter your user ID" autocomplete="username" />
+        </div>
+        <div class="form-group">
+          <label for="login-pass">Password</label>
+          <input type="password" id="login-pass" placeholder="Enter your password" autocomplete="current-password" />
+        </div>
+        <p id="login-error" class="error-msg hidden"></p>
+        <button type="submit" class="btn btn-purple btn-block">Login</button>
+      </form>
+      <p class="link-text">Don't have an account? <a href="#" id="go-signup">Sign Up</a></p>
+      <button type="button" id="btn-guest" class="btn btn-gray btn-block" style="margin-top:12px">Continue as Guest</button>
+      <div class="stats-row">
+        <div class="stat-card"><strong>6</strong><span>Classic Games</span></div>
+        <div class="stat-card"><strong>3</strong><span>Difficulty Levels</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sign Up -->
+  <section id="view-signup" class="view hidden">
+    <div class="login-card">
+      <div class="logo-icon">🎮</div>
+      <h1>Create Account</h1>
+      <p class="subtitle">Join the AI Arena</p>
+      <form id="signup-form">
+        <div class="form-group">
+          <label for="signup-user">User ID</label>
+          <input type="text" id="signup-user" required />
+        </div>
+        <div class="form-group">
+          <label for="signup-pass">Password</label>
+          <input type="password" id="signup-pass" required />
+        </div>
+        <p id="signup-error" class="error-msg hidden"></p>
+        <button type="submit" class="btn btn-purple btn-block">Sign Up</button>
+      </form>
+      <p class="link-text"><a href="#" id="go-login">Back to Login</a></p>
+    </div>
+  </section>
+
+  <!-- Game Selection -->
+  <section id="view-games" class="view hidden">
+    <header class="top-bar">
+      <button type="button" class="back-btn" data-nav="login">← Back</button>
+      <div class="top-actions">
+        <button type="button" class="btn btn-yellow btn-sm" data-nav="leaderboard">🏆 Leaderboard</button>
+        <button type="button" class="btn btn-purple btn-sm" data-nav="community">💬 Community</button>
+        <span class="welcome-text">Welcome, <strong id="welcome-name">Guest</strong>!</span>
+      </div>
+    </header>
+    <div class="page-title">
+      <h2>Select Your Game</h2>
+      <p>Choose a classic arcade game to challenge the AI</p>
+    </div>
+    <div class="game-grid" id="game-grid"></div>
+  </section>
+
+  <!-- Difficulty -->
+  <section id="view-difficulty" class="view hidden">
+    <header class="top-bar">
+      <button type="button" class="back-btn" data-nav="games">← Back to Games</button>
+    </header>
+    <div class="page-title">
+      <h2 id="diff-game-title">Tetris</h2>
+      <p>Select Difficulty</p>
+    </div>
+    <div class="difficulty-grid">
+      <div class="difficulty-card">
+        <div class="diff-icon">😊</div>
+        <h3>Easy</h3>
+        <p>AI reacts slowly</p>
+        <button type="button" class="btn btn-green" data-difficulty="easy">Start</button>
+      </div>
+      <div class="difficulty-card">
+        <div class="diff-icon">😐</div>
+        <h3>Medium</h3>
+        <p>AI is moderately challenging</p>
+        <button type="button" class="btn btn-orange" data-difficulty="medium">Start</button>
+      </div>
+      <div class="difficulty-card hell">
+        <div class="diff-icon">😈</div>
+        <h3>Hell</h3>
+        <p>AI plays near-perfectly</p>
+        <button type="button" class="btn btn-red" data-difficulty="hell">Start</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gameplay -->
+  <section id="view-gameplay" class="view hidden">
+    <header class="top-bar">
+      <button type="button" class="back-btn" id="btn-exit-game">← Back to Games</button>
+      <div class="top-actions">
+        <button type="button" class="btn btn-yellow btn-sm" data-nav="leaderboard">🏆 Leaderboard</button>
+      </div>
+    </header>
+    <div class="gameplay-header">
+      <h2 id="play-game-title">Tetris</h2>
+    </div>
+    <div class="scoreboard">
+      <div class="score-box player">
+        <h4>Player 1 (You)</h4>
+        <div class="score-value" id="player-score">0</div>
+      </div>
+      <div class="score-box ai">
+        <h4>Player 2 (AI)</h4>
+        <div class="score-value" id="ai-score">0</div>
+      </div>
+    </div>
+    <div id="game-container"></div>
+    <footer id="game-controls-footer" class="game-controls-footer hidden" aria-label="Game controls"></footer>
+    <div id="game-over-panel" class="game-over-banner hidden"></div>
+  </section>
+
+  <!-- Leaderboard -->
+  <section id="view-leaderboard" class="view hidden">
+    <header class="top-bar">
+      <button type="button" class="back-btn" data-nav="games">← Back to Games</button>
+      <button type="button" class="btn btn-red btn-sm" id="btn-clear-lb">Clear Leaderboard</button>
+    </header>
+    <div class="page-title">
+      <h2>🏆 Leaderboard</h2>
+      <p>Top players ranked by AI comparison percentage</p>
+    </div>
+    <div class="filters-row">
+      <select id="filter-game">
+        <option value="all">All Games</option>
+        <option value="tetris">Tetris</option>
+        <option value="pong">Pong</option>
+        <option value="boxing">Boxing</option>
+        <option value="space-invaders">Space Invaders</option>
+        <option value="chess">Chess</option>
+        <option value="gomoku">Gomoku</option>
+      </select>
+      <select id="filter-difficulty">
+        <option value="all">All Difficulties</option>
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hell">Hell</option>
+      </select>
+    </div>
+    <div class="leaderboard-list" id="leaderboard-list"></div>
+    <div class="info-box">
+      <h3>How AI Comparison Works</h3>
+      <p>The percentage shows how well you performed compared to the AI. 100% means you matched or beat the AI's performance.</p>
+      <div class="legend">
+        <span><span class="dot green"></span> ≥100% Outstanding!</span>
+        <span><span class="dot yellow"></span> 70–99% Good Performance</span>
+        <span><span class="dot red"></span> &lt;70% Keep Practicing!</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Community -->
+  <section id="view-community" class="view hidden">
+    <header class="top-bar">
+      <button type="button" class="back-btn" data-nav="games">← Back to Games</button>
+    </header>
+    <div class="community-header">
+      <h2>💬 Community</h2>
+      <p>Share strategies, tips, and connect with other players</p>
+    </div>
+    <div class="post-form">
+      <textarea id="new-post-content" placeholder="Share your thoughts..."></textarea>
+      <button type="button" class="btn btn-purple" id="btn-post">Post</button>
+    </div>
+    <div class="posts-feed" id="posts-feed"></div>
+  </section>
+
+  <!-- Game libraries (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" defer></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js" defer></script>
+
+  <script src="/js/game-icons.js" defer></script>
+  <script src="/js/ai-config.js" defer></script>
+  <script src="/js/games/canvas-arena.js" defer></script>
+  <script src="/js/pong-rl-agent.js" defer></script>
+  <script src="/js/games/pong-core.js" defer></script>
+  <script src="/js/games/pong.js" defer></script>
+  <script src="/js/games/space-invaders-core.js" defer></script>
+  <script src="/js/games/space-invaders.js" defer></script>
+  <script src="/js/games/tetris.js" defer></script>
+  <script src="/js/games/boxing.js" defer></script>
+  <script src="/js/games/gomoku.js" defer></script>
+  <script src="/js/games/chess.js" defer></script>
+  <script src="/js/app.js" defer></script>
+</body>
+</html>

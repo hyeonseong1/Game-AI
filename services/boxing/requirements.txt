@@ -1,0 +1,5 @@
+# Minimal deps for Atari Boxing (PettingZoo boxing_v2) web service
+# After install: pip install AutoROM && AutoROM --accept-license
+pettingzoo[atari]==1.24.1
+numpy>=1.24.4,<2
+Pillow>=10.1.0
