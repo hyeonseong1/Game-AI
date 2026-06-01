@@ -171,6 +171,81 @@ function renderGameGrid() {
   });
 }
 
+function closeResultModal() {
+  document.getElementById("result-modal-overlay").classList.add("hidden");
+}
+
+function showResultModal({ playerScore, aiScore, message, game, difficulty, isNewRecord, prevBest }) {
+  const aiPercent = calcAiPercent(playerScore, aiScore);
+
+  const isWin = /win|you win|player win/i.test(message);
+  const isLose = /lose|lost|ai win|game over/i.test(message);
+  const icon = isWin ? "🏆" : isLose ? "💀" : "🤝";
+  const titleClass = isWin ? "win" : isLose ? "lose" : "draw";
+
+  document.getElementById("result-modal-icon").textContent = icon;
+  const title = document.getElementById("result-modal-title");
+  title.textContent = isWin ? "You Win!" : isLose ? "You Lose!" : message;
+  title.className = "result-modal-title " + titleClass;
+  document.getElementById("result-player-score").textContent = playerScore;
+  document.getElementById("result-ai-score").textContent = aiScore;
+  document.getElementById("result-ai-percent").textContent = aiPercent + "%";
+
+  const recordEl = document.getElementById("result-new-record");
+  const prevBestEl = document.getElementById("result-prev-best");
+  if (isNewRecord) {
+    recordEl.classList.remove("hidden");
+    prevBestEl.textContent = prevBest !== null
+      ? `Previous best: ${prevBest} → ${playerScore}`
+      : "First record for this game & difficulty!";
+  } else {
+    recordEl.classList.add("hidden");
+  }
+
+  const saveBtn = document.getElementById("btn-result-save");
+  saveBtn.textContent = "Save to Leaderboard";
+  saveBtn.disabled = false;
+  saveBtn.style.display = state.user?.isGuest ? "none" : "";
+  saveBtn.onclick = async () => {
+    try {
+      await api("/api/leaderboard", {
+        method: "POST",
+        body: JSON.stringify({
+          username: state.user.userId,
+          game: game.id,
+          difficulty,
+          score: playerScore,
+          aiPercent,
+        }),
+      });
+      saveBtn.textContent = "Saved!";
+      saveBtn.disabled = true;
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  document.getElementById("btn-result-restart").onclick = () => {
+    closeResultModal();
+    startGame(difficulty);
+  };
+
+  document.getElementById("btn-result-leaderboard").onclick = () => {
+    closeResultModal();
+    stopActiveGame();
+    loadLeaderboard();
+    showView("leaderboard");
+  };
+
+  document.getElementById("btn-result-games").onclick = () => {
+    closeResultModal();
+    stopActiveGame();
+    showView("games");
+  };
+
+  document.getElementById("result-modal-overlay").classList.remove("hidden");
+}
+
 function stopActiveGame() {
   if (state.activeEngine?.unmount) state.activeEngine.unmount();
   state.activeEngine = null;
@@ -184,7 +259,6 @@ function startGame(difficulty) {
   document.getElementById("play-game-title").textContent = game.title;
   document.getElementById("player-score").textContent = "0";
   document.getElementById("ai-score").textContent = "0";
-  document.getElementById("game-over-panel").classList.add("hidden");
   const container = document.getElementById("game-container");
   container.innerHTML = "";
 
@@ -195,33 +269,25 @@ function startGame(difficulty) {
       document.getElementById("ai-score").textContent = ai;
     },
     async onEnd({ playerScore, aiScore, message }) {
-      const aiPercent = calcAiPercent(playerScore, aiScore);
-      const panel = document.getElementById("game-over-panel");
-      panel.classList.remove("hidden");
-      panel.innerHTML = `
-        <h3>${message}</h3>
-        <p>Your score: <strong>${playerScore}</strong> — AI score: <strong>${aiScore}</strong></p>
-        <p>AI comparison: <strong>${aiPercent}%</strong></p>
-        <button type="button" class="btn btn-purple" id="btn-save-score">Save to Leaderboard</button>
-        <button type="button" class="btn btn-gray" style="margin-left:8px" data-nav="games">Back to Games</button>
-      `;
-      document.getElementById("btn-save-score").addEventListener("click", async () => {
+      let prevBest = null;
+      let isNewRecord = false;
+
+      if (!state.user?.isGuest) {
         try {
-          await api("/api/leaderboard", {
-            method: "POST",
-            body: JSON.stringify({
-              username: state.user.userId,
-              game: game.id,
-              difficulty,
-              score: playerScore,
-              aiPercent,
-            }),
-          });
-          panel.querySelector("h3").textContent = "Score saved!";
-        } catch (e) {
-          alert(e.message);
-        }
-      });
+          const q = new URLSearchParams({ username: state.user.userId, game: game.id, difficulty });
+          const result = await api(`/api/leaderboard/personal-best?${q}`);
+          prevBest = result.best?.score ?? null;
+          isNewRecord = prevBest === null || playerScore > prevBest;
+        } catch {}
+      } else {
+        const key = `pb_${state.user.userId}_${game.id}_${difficulty}`;
+        const stored = localStorage.getItem(key);
+        prevBest = stored !== null ? Number(stored) : null;
+        isNewRecord = prevBest === null || playerScore > prevBest;
+        if (isNewRecord) localStorage.setItem(key, playerScore);
+      }
+
+      showResultModal({ playerScore, aiScore, message, game, difficulty, isNewRecord, prevBest });
     },
   };
 
@@ -445,25 +511,9 @@ document.getElementById("btn-post").addEventListener("click", async () => {
   loadCommunity();
 });
 
-document.addEventListener("click", (e) => {
-  const nav = e.target.closest("[data-nav]");
-  if (nav && nav.closest("#game-over-panel")) {
-    stopActiveGame();
-    showView(nav.dataset.nav);
-  }
+document.getElementById("result-modal-overlay").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeResultModal();
 });
 
 renderGameGrid();
-
-const saved = localStorage.getItem("aiArenaUser");
-if (saved) {
-  try {
-    const u = JSON.parse(saved);
-    setUser(u.userId, u.isGuest);
-    showView("games");
-  } catch {
-    showView("login");
-  }
-} else {
-  showView("login");
-}
+showView("login");

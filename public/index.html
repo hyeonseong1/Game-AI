@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Web Game Programming — AI Arena</title>
+  <title>Beat or Beaten</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -15,7 +15,7 @@
   <section id="view-login" class="view">
     <div class="login-card">
       <div class="logo-icon">🎮</div>
-      <h1>Web Game Programming</h1>
+      <h1>Beat or Beaten</h1>
       <p class="subtitle">Challenge AI in classic arcade games</p>
       <form id="login-form">
         <div class="form-group">
@@ -188,6 +188,38 @@
     </div>
     <div class="posts-feed" id="posts-feed"></div>
   </section>
+
+  <!-- Game Result Modal -->
+  <div id="result-modal-overlay" class="result-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="result-modal-title">
+    <div class="result-modal">
+      <div id="result-modal-icon" class="result-modal-icon"></div>
+      <h2 id="result-modal-title" class="result-modal-title"></h2>
+      <div id="result-new-record" class="result-new-record hidden">
+        <span class="result-new-record-badge">🎉 New Personal Record!</span>
+        <span id="result-prev-best" class="result-prev-best"></span>
+      </div>
+      <div class="result-modal-scores">
+        <div class="result-score-box">
+          <span class="result-score-label">Your Score</span>
+          <span id="result-player-score" class="result-score-value"></span>
+        </div>
+        <div class="result-score-box">
+          <span class="result-score-label">AI Score</span>
+          <span id="result-ai-score" class="result-score-value"></span>
+        </div>
+        <div class="result-score-box">
+          <span class="result-score-label">vs AI</span>
+          <span id="result-ai-percent" class="result-score-value"></span>
+        </div>
+      </div>
+      <div class="result-modal-actions">
+        <button type="button" class="btn btn-purple btn-block" id="btn-result-restart">Restart</button>
+        <button type="button" class="btn btn-green btn-block" id="btn-result-save">Save to Leaderboard</button>
+        <button type="button" class="btn btn-yellow btn-block" id="btn-result-leaderboard">🏆 View Leaderboard</button>
+        <button type="button" class="btn btn-gray btn-block" id="btn-result-games">Back to Games</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Game libraries (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" defer></script>

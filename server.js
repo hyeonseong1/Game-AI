@@ -116,6 +116,22 @@ async function handleApi(req, res) {
   }
 
 
+  if (route === "/api/leaderboard/personal-best" && method === "GET") {
+    const username = url.searchParams.get("username");
+    const game = url.searchParams.get("game");
+    const difficulty = url.searchParams.get("difficulty");
+    if (!username || !game || !difficulty) {
+      return send(res, 400, { error: "Missing params." });
+    }
+    const db = readDb();
+    const entries = db.leaderboard.filter(
+      (e) => e.username === username && e.game === game && e.difficulty === difficulty
+    );
+    if (entries.length === 0) return send(res, 200, { best: null });
+    const best = entries.reduce((a, b) => (b.score > a.score ? b : a));
+    return send(res, 200, { best });
+  }
+
   if (route === "/api/leaderboard" && method === "GET") {
     const game = url.searchParams.get("game");
     const difficulty = url.searchParams.get("difficulty");

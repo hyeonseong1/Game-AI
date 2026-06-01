@@ -28,6 +28,8 @@ the remaining games use well-established classic AI algorithms.
 | **PPO reinforcement learning** | Trained neural network AI built into Pong, Boxing, and Space Invaders |
 | **Dual-screen battles** | Space Invaders and Tetris run human (left) vs AI (right) simultaneously |
 | **In-browser inference** | RL models exported as JSON — no Python server needed at runtime |
+| **Win/Lose result modal** | Animated modal at game end with scores, AI comparison %, restart button, and leaderboard shortcut |
+| **Personal record tracking** | Detects and highlights new personal bests per user, game, and difficulty; shows previous best vs current score |
 | **Leaderboard** | Per-game, per-difficulty score tracking (JSON DB) |
 | **Community** | Posts, likes, comments |
 | **Guest login** | Play instantly without signing up |
@@ -425,6 +427,7 @@ After training, refresh the browser — no server restart needed.
 | GET | `/api/leaderboard?game=&difficulty=` | Get leaderboard |
 | POST | `/api/leaderboard` | Submit score |
 | DELETE | `/api/leaderboard` | Clear leaderboard |
+| GET | `/api/leaderboard/personal-best?username=&game=&difficulty=` | Get user's personal best score |
 | GET | `/api/community/posts` | Get posts |
 | POST | `/api/community/posts` | Create post |
 | POST | `/api/community/posts/:id/like` | Toggle like |

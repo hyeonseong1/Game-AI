@@ -5,6 +5,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] — 2026-06-01
+
+### Win/Lose Result Modal + Personal Record Tracking
+
+---
+
+### Result Modal
+
+**Before**: Game result was shown as an inline banner (`#game-over-panel`) at the bottom of the gameplay view.
+
+**After**: Animated modal overlay replaces the banner, providing clear Win/Lose feedback with action buttons.
+
+#### Added
+- `public/index.html`: `#result-modal-overlay` — fixed full-screen overlay containing the result modal
+  - `#result-new-record` — personal record badge section (hidden by default)
+  - `#result-prev-best` — previous best score text
+  - Buttons: **Restart**, **Save to Leaderboard**, **🏆 View Leaderboard**, **Back to Games**
+- `public/css/styles.css`:
+  - `.result-modal-overlay` — backdrop blur overlay with `overlay-in` fade animation
+  - `.result-modal` — modal card with `modal-in` spring animation (scale + translateY)
+  - `.result-modal-title.win / .lose / .draw` — colour-coded title (green / red / orange)
+  - `.result-new-record` — gold gradient badge with `record-pulse` entrance animation
+  - `.result-score-box` — three-column score grid (Your Score · AI Score · vs AI %)
+- `public/js/app.js`:
+  - `showResultModal({ playerScore, aiScore, message, game, difficulty, isNewRecord, prevBest })` — renders modal content and wires button handlers
+  - `closeResultModal()` — hides overlay; also triggered by clicking outside the modal card
+  - **Restart button**: calls `closeResultModal()` then `startGame(difficulty)` with the same game and difficulty
+  - **View Leaderboard button**: closes modal, stops game engine, loads and navigates to leaderboard view
+  - **Save to Leaderboard**: disabled and labelled "Saved!" after first successful save; hidden for guest users
+  - `.game-over-banner` set to `display: none` — legacy panel fully replaced
+
+---
+
+### Personal Record Tracking
+
+#### Added
+- `server.js`: `GET /api/leaderboard/personal-best?username=&game=&difficulty=`
+  - Filters `db.leaderboard` for entries matching all three parameters
+  - Returns `{ best: <entry> }` (highest-score entry) or `{ best: null }` if no prior entry exists
+- `public/js/app.js` — `onEnd` callback:
+  - **Logged-in users**: fetches `/api/leaderboard/personal-best` before showing the modal; compares `playerScore > best.score`
+  - **Guest users**: reads/writes `localStorage` key `pb_{userId}_{game}_{difficulty}` for session-persistent personal bests
+  - `isNewRecord = true` when no prior record exists (first play) or current score exceeds previous best
+
+#### Changed
+- Result modal shows `#result-new-record` banner when `isNewRecord === true`:
+  - **First record**: "First record for this game & difficulty!"
+  - **Record broken**: "Previous best: {prevBest} → {playerScore}"
+
+---
+
 ## [2.0.0] — 2026-05-31
 
 ### Major AI Upgrade Release
