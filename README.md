@@ -4,6 +4,12 @@ A web-based platform featuring 6 classic arcade games, each with an AI opponent.
 Pong, Boxing, and Space Invaders use **PPO (Proximal Policy Optimization) reinforcement learning agents**;
 the remaining games use well-established classic AI algorithms.
 
+
+## How to run?    
+```bash
+node server.js
+```
+
 ---
 
 ## Table of Contents
