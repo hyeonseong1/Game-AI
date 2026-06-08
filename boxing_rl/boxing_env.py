@@ -133,6 +133,7 @@ class BoxingEnv:
         reward = 0.0
         move_idx = int(action) % 9
         do_punch = int(action) >= 9
+        prev_d = float(np.hypot(self.ax - self.px, self.ay - self.py))
 
         # 1. Agent moves
         if not self.a_knocked:
@@ -154,7 +155,18 @@ class BoxingEnv:
         # 2. Opponent acts
         opp_hit = self._opp_step()
         if opp_hit:
-            reward -= 1.0
+            reward -= 2.0
+
+        d_now = float(np.hypot(self.ax - self.px, self.ay - self.py))
+        if not self.a_knocked and not self.p_knocked:
+            if d_now <= HIT_RANGE:
+                reward += 0.01
+                if do_punch:
+                    reward += 0.04
+            elif d_now < prev_d:
+                reward += 0.006
+            else:
+                reward -= 0.003
 
         # 3. Tick timers
         self.a_pt = max(0, self.a_pt - 1)

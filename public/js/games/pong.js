@@ -82,13 +82,13 @@ const PongGame = {
     } else if (difficulty === "medium") {
       _loadPongAgent("mid", "/models/pong_mid.json").then((agent) => {
         mountWithAI.call(this, { mode: agent ? "ppo" : "rule", rlAgent: agent,
-          speedMult: 0.8, mistakeRate: 0.15 });
+          speedMult: 0.8, mistakeRate: 0.15, assistRate: 0.55 });
       });
     } else {
       // hell — best model
       _loadPongAgent("best", "/models/pong_best.json").then((agent) => {
         mountWithAI.call(this, { mode: agent ? "ppo" : "rule", rlAgent: agent,
-          speedMult: 1.15, mistakeRate: 0.03 });
+          speedMult: 1.15, mistakeRate: 0.03, assistRate: 0.92 });
       });
     }
   },

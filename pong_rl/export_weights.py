@@ -7,29 +7,16 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
-import torch
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
+from rl_common import checkpoint_to_json
 
 def model_to_json(path: str) -> dict:
-    ckpt = torch.load(path, map_location="cpu", weights_only=False)
-    sd = ckpt["policy"]
-
-    def t(key):
-        return sd[key].numpy().tolist()
-
-    return {
-        "shared_0_weight": t("shared.0.weight"),
-        "shared_0_bias":   t("shared.0.bias"),
-        "shared_2_weight": t("shared.2.weight"),
-        "shared_2_bias":   t("shared.2.bias"),
-        "actor_weight":    t("actor_head.weight"),
-        "actor_bias":      t("actor_head.bias"),
-        "meta": {
-            "total_steps": int(ckpt.get("total_steps", 0)),
-            "updates":     int(ckpt.get("updates", 0)),
-        },
-    }
+    return checkpoint_to_json(path, state_dim=6, action_dim=3)
 
 
 def main():

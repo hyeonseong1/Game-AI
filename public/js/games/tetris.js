@@ -560,17 +560,17 @@ function _drawCell(ctx, x, y, size, color) {
 function mountDualTetris(container, ctx, difficulty) {
     // Canvas dimensions: two boards side by side
     const GAP = 16;
+    const PAD_X = 8;
+    const BOARD_Y = 30;
     const PANEL = 72;   // side panel width
     const CW = BW + PANEL;     // canvas width per player: 292
     const CH = BH + 40;        // canvas height: 480
-    const TOTAL_W = CW * 2 + GAP;
+    const TOTAL_W = CW * 2 + GAP + PAD_X * 2;
 
     container.innerHTML = `
-      <div class="tetris-dual-wrap">
-        <canvas id="td-canvas" width="${TOTAL_W}" height="${CH}"
-                style="width:100%;max-width:${TOTAL_W}px;display:block;margin:0 auto;
-                       background:#000;border-radius:8px"></canvas>
-        <p class="controls-hint" style="text-align:center;margin-top:8px;font-size:12px;color:#888">
+      <div class="tetris-dual-wrap" style="--tetris-canvas-width:${TOTAL_W}px">
+        <canvas id="td-canvas" class="tetris-dual-canvas" width="${TOTAL_W}" height="${CH}"></canvas>
+        <p class="controls-hint tetris-controls-hint">
           ← → move &nbsp;|&nbsp; ↑ / Z rotate &nbsp;|&nbsp; ↓ soft-drop &nbsp;|&nbsp; Space hard-drop
         </p>
       </div>`;
@@ -655,13 +655,14 @@ function mountDualTetris(container, ctx, difficulty) {
         const s1 = eng1.snapshot(), s2 = eng2.snapshot();
 
         // Player 1
-        renderBoard(c, s1, 0, 30, '🎮 You (Player 1)');
-        renderSidePanel(c, s1, BW + 4, 30);
+        const x1 = PAD_X;
+        renderBoard(c, s1, x1, BOARD_Y, '🎮 You (Player 1)');
+        renderSidePanel(c, s1, x1 + BW + 4, BOARD_Y);
 
         // Player 2
-        const x2 = CW + GAP;
-        renderBoard(c, s2, x2, 30, '🤖 AI (Player 2)');
-        renderSidePanel(c, s2, x2 + BW + 4, 30);
+        const x2 = x1 + CW + GAP;
+        renderBoard(c, s2, x2, BOARD_Y, '🤖 AI (Player 2)');
+        renderSidePanel(c, s2, x2 + BW + 4, BOARD_Y);
 
         rafId = requestAnimationFrame(loop);
     };

@@ -178,14 +178,19 @@ function closeResultModal() {
 function showResultModal({ playerScore, aiScore, message, game, difficulty, isNewRecord, prevBest }) {
   const aiPercent = calcAiPercent(playerScore, aiScore);
 
-  const isWin = /win|you win|player win/i.test(message);
-  const isLose = /lose|lost|ai win|game over/i.test(message);
-  const icon = isWin ? "🏆" : isLose ? "💀" : "🤝";
-  const titleClass = isWin ? "win" : isLose ? "lose" : "draw";
+  const resultMessage = String(message || "");
+  const isDraw = /\b(draw|tie)\b|evenly matched/i.test(resultMessage);
+  const messageSaysPlayerWin = /\byou\s+(win|won)\b|\bplayer\s+(wins|won)\b/i.test(resultMessage);
+  const messageSaysAiWin = /\bai\s+(wins|won)\b/i.test(resultMessage);
+  const messageSaysPlayerLoss = /\byou\s+(lose|lost)\b|\bgame over\b|better luck/i.test(resultMessage);
+  const isPlayerWin = !isDraw && !messageSaysAiWin && !messageSaysPlayerLoss && (messageSaysPlayerWin || playerScore > aiScore);
+  const isAiWin = !isDraw && !messageSaysPlayerWin && (messageSaysAiWin || messageSaysPlayerLoss || aiScore > playerScore);
+  const icon = isPlayerWin ? "🏆" : isAiWin ? "🤖" : "🤝";
+  const titleClass = isPlayerWin ? "win" : isAiWin ? "lose" : "draw";
 
   document.getElementById("result-modal-icon").textContent = icon;
   const title = document.getElementById("result-modal-title");
-  title.textContent = isWin ? "You Win!" : isLose ? "You Lose!" : message;
+  title.textContent = isPlayerWin ? "You Win!" : isAiWin ? "AI Wins!" : resultMessage;
   title.className = "result-modal-title " + titleClass;
   document.getElementById("result-player-score").textContent = playerScore;
   document.getElementById("result-ai-score").textContent = aiScore;

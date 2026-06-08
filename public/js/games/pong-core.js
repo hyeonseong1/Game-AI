@@ -344,6 +344,7 @@ class AIController {
         this.targetY     = CONFIG.LOGICAL_HEIGHT / 2;
         this.speedMult   = options.speedMult ?? 1;
         this.mistakeRate = options.mistakeRate ?? 0;
+        this.assistRate  = options.assistRate ?? 0;
         this._carry      = 0;
     }
 
@@ -362,6 +363,32 @@ class AIController {
         ];
     }
 
+    _predictInterceptY(ball, paddle) {
+        if (!ball.active || ball.vx <= 0) return null;
+        const targetX = paddle.x - ball.size;
+        const frames = (targetX - ball.x) / Math.max(ball.vx, 0.001);
+        if (!Number.isFinite(frames) || frames < 0) return null;
+        let y = ball.y + ball.size / 2 + ball.vy * frames;
+        const span = CONFIG.LOGICAL_HEIGHT * 2;
+        y = ((y % span) + span) % span;
+        if (y > CONFIG.LOGICAL_HEIGHT) y = span - y;
+        return clamp(y - paddle.height / 2, 0, CONFIG.LOGICAL_HEIGHT - paddle.height);
+    }
+
+    _assistedDirection(ball, paddle2, modelDir) {
+        const target = this._predictInterceptY(ball, paddle2);
+        if (target === null) return modelDir;
+        const diff = target - paddle2.y;
+        if (Math.abs(diff) < 2) return 0;
+        const desired = diff < 0 ? -1 : 1;
+        const urgent = ball.x > CONFIG.LOGICAL_WIDTH * 0.58 || Math.abs(diff) > paddle2.height * 0.28;
+        const movingAway = modelDir !== 0 && modelDir !== desired;
+        if ((urgent || modelDir === 0 || movingAway) && Math.random() < this.assistRate) {
+            return desired;
+        }
+        return modelDir;
+    }
+
     update(ball, paddle2, paddle1) {
         if (this.mode === 'random') {
             const r = Math.random();
@@ -371,7 +398,8 @@ class AIController {
         if (this.mode === 'ppo' && this.rlAgent) {
             const obs    = this._buildObs(ball, paddle2, paddle1 || paddle2);
             const action = this.rlAgent.predict(obs); // 0=stay 1=up 2=down
-            return action === 1 ? -1 : action === 2 ? 1 : 0;
+            const modelDir = action === 1 ? -1 : action === 2 ? 1 : 0;
+            return this._assistedDirection(ball, paddle2, modelDir);
         }
 
         // rule-based fallback
@@ -1228,4 +1256,3 @@ class Game {
 
 return { Game, CONFIG };
 })();
-

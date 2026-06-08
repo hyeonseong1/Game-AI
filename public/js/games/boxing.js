@@ -263,7 +263,8 @@ const BoxingGame = (function () {
     // PPO AI throttle state
     let ppoDt = 0;
     let ppoVx = 0, ppoVy = 0, ppoPunchPending = false;
-    const PPO_INTERVAL = difficulty === 'hell' ? 160 : 220; // ms between decisions
+    const PPO_INTERVAL = difficulty === 'hell' ? 90 : 150; // ms between decisions
+    const PPO_ASSIST = difficulty === 'hell' ? 0.92 : 0.58;
 
     // ── Input ──────────────────────────────────────────────────────────────
     function onKey(e, down) {
@@ -356,6 +357,23 @@ const BoxingGame = (function () {
         ppoVx = decoded.vx;
         ppoVy = decoded.vy;
         if (decoded.punch) ppoPunchPending = true;
+      }
+
+      const dx = player.x - ai.x;
+      const dy = player.y - ai.y;
+      const d = Math.hypot(dx, dy) || 1;
+      if (Math.random() < PPO_ASSIST) {
+        if (player.punching && d <= HIT_RANGE + 14) {
+          ppoVx = -(dx / d) * SPEED;
+          ppoVy = -(dy / d) * SPEED;
+        } else if (d > HIT_RANGE * 0.86) {
+          ppoVx = (dx / d) * SPEED;
+          ppoVy = (dy / d) * SPEED;
+        } else {
+          ppoVx *= 0.35;
+          ppoVy *= 0.35;
+          ppoPunchPending = true;
+        }
       }
 
       ai.vx = ppoVx; ai.vy = ppoVy;

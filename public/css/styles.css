@@ -589,6 +589,32 @@ body {
   max-width: 100%;
 }
 
+.tetris-dual-wrap {
+  width: 100%;
+  max-width: var(--tetris-canvas-width, 616px);
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.tetris-dual-canvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  background: #000;
+  border-radius: 8px;
+}
+
+.controls-hint.tetris-controls-hint {
+  margin-top: 8px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #888;
+}
+
 .controls-hint {
   margin-top: 12px;
   font-size: 0.8rem;

@@ -1,14 +1,8 @@
 # AI Arena — Web Game Platform
 
 A web-based platform featuring 6 classic arcade games, each with an AI opponent.
-Pong, Boxing, and Space Invaders use **PPO (Proximal Policy Optimization) reinforcement learning agents**;
+Pong and Boxing use **SimbaV2 PPO reinforcement learning agents**; Space Invaders uses a **paper-locked Rainbow DQN agent**;
 the remaining games use well-established classic AI algorithms.
-
-
-## How to run?    
-```bash
-node server.js
-```
 
 ---
 
@@ -31,7 +25,9 @@ node server.js
 |---------|-------------|
 | **6 games** | Pong, Gomoku, Chess, Boxing, Space Invaders, Tetris |
 | **3 difficulty levels** | Easy (random/weak AI) → Medium (mid checkpoint) → Hell (best model) |
-| **PPO reinforcement learning** | Trained neural network AI built into Pong, Boxing, and Space Invaders |
+| **SimbaV2 PPO reinforcement learning** | Hyperspherical-normalized PPO training path for Pong and Boxing |
+| **Rainbow DQN** | Space Invaders agent with Double DQN targets, prioritized replay, dueling C51 distributions, NoisyNet exploration, and 3-step returns |
+| **Tactical guard rails** | Runtime assist prevents obvious misses, bad boxing spacing, and Space Invaders bomb-lane deaths |
 | **Dual-screen battles** | Space Invaders and Tetris run human (left) vs AI (right) simultaneously |
 | **In-browser inference** | RL models exported as JSON — no Python server needed at runtime |
 | **Win/Lose result modal** | Animated modal at game end with scores, AI comparison %, restart button, and leaderboard shortcut |
@@ -98,15 +94,15 @@ Two game canvases run side by side. Left is the human player; right is the AI.
 ```
 ┌──────────────────┬────┬──────────────────┐
 │ 🎮 You (Player 1)│ VS │ 🤖 AI (Player 2) │
-│   keyboard       │    │   PPO agent       │
+│   keyboard       │    │ Rainbow DQN agent │
 └──────────────────┴────┴──────────────────┘
 ```
 
 - **Controls**: `←`/`→` (move), `Space` (fire) — left screen only
-- **AI**: PPO neural network (obs: 20-dim, actions: 6)
+- **AI**: Rainbow DQN neural network (obs: 20-dim, actions: 6)
   - Easy: random policy
-  - Medium: `si_mid.json` (step 751,616)
-  - Hell: `si_best.json` (best reward, step 1,433,600)
+  - Medium: `si_rainbow_mid.json` (20,000 agent steps / 80,000 frames)
+  - Hell: `si_rainbow_best.json` (22,000 agent steps / 88,000 frames)
 
 ---
 
@@ -130,21 +126,38 @@ Two game canvases run side by side. Left is the human player; right is the AI.
 
 ## AI Design
 
-### PPO Reinforcement Learning (Pong · Boxing · Space Invaders)
+### RL Agents (Pong · Boxing · Space Invaders)
 
-All three games share the same **ActorCritic PPO** architecture.
+Pong and Boxing use a **SimbaV2-style discrete ActorCritic PPO** trainer. Space Invaders now uses a **Rainbow DQN** trainer that follows Hessel et al.'s Rainbow Table 1 settings: Double DQN targets, proportional prioritized replay, dueling C51 return distributions, NoisyNet exploration, 3-step returns, target network updates every 32K frames, and learning after 80K frames. The browser inference engine still supports the older 2-layer MLP and SimbaV2 JSON files, while active Space Invaders play loads the Rainbow JSON files.
 
 #### Network Architecture
 
 ```
+Pong / Boxing:
 Input (obs_dim)
     │
-Linear → Tanh           256 nodes
+Running observation normalization
     │
-Linear → Tanh           256 nodes
+HyperEmbedder + L2 feature normalization
     │
-Actor Head              act_dim nodes (Categorical distribution)
-Critic Head             1 node (state value)
+4 × HyperLERP residual blocks
+    - row-normalized linear weights
+    - L2-normalized features
+    - learnable residual interpolation
+    │
+PPO Actor Head          act_dim logits (Pong, Boxing)
+PPO Critic Head         distributional value over fixed support
+
+Space Invaders:
+Input (20 feature obs)
+    │
+NoisyLinear feature encoder
+    │
+Dueling value / advantage NoisyLinear streams
+    │
+51 C51 atoms over [-10, 10]
+    │
+Expected Q-values over 6 actions
 ```
 
 #### Observation and Action Spaces
@@ -155,13 +168,15 @@ Critic Head             1 node (state value)
 | Boxing | 14 | 18 | Both boxer positions, scores, punch/knockdown timers, time remaining | 9 directions × punch toggle |
 | Space Invaders | 20 | 6 | Player position & bullet, alien formation, 3 bombs, aiming hint, wave & lives | stay·left·right × fire toggle |
 
-#### Training Results
+#### Bundled Legacy Checkpoints
 
 | Game | Total Steps | Best avg-50 reward | Mid checkpoint |
 |------|-------------|-------------------|----------------|
 | Pong | 1,000,000 | +8.04 | step 501,760 |
 | Boxing | 1,000,000 | +114.156 | step 501,760 |
 | Space Invaders | 1,500,000 | +50.47 | step 751,616 |
+
+The old `si_mid.json` and `si_best.json` files are preserved as legacy SimbaV2-style checkpoints. Active Space Invaders play now loads `si_rainbow_mid.json` and `si_rainbow_best.json`, exported with `"architecture": "rainbow_feature_c51"`.
 
 #### In-Browser Inference
 
@@ -170,13 +185,13 @@ No Python or PyTorch required at runtime — inference runs entirely in the brow
 ```
 Training (Python)                      Deployment (Browser)
 ─────────────────────────────          ──────────────────────────────
-PPO → ppo_agent.py                 →   export_weights.py
-      ActorCritic (PyTorch)        →   model.json  (weight arrays)
-                                   →   pong-rl-agent.js (JS inference)
-                                   →   predict(obs) → action
+SimbaV2 PPO / Rainbow DQN      →   export_weights.py
+PyTorch PPO/Rainbow network    →   model.json  (weight arrays)
+                                →   pong-rl-agent.js (JS inference)
+                                →   predict(obs) → action
 ```
 
-The `RLAgent` class in `pong-rl-agent.js` is reused by all three games (Pong, Boxing, Space Invaders).
+The `PongRLAgent` class in `pong-rl-agent.js` is reused by all three games. It detects `"legacy_mlp"`, `"simba_v2_discrete"`, and `"rainbow_feature_c51"` JSON automatically.
 
 ---
 
@@ -241,7 +256,7 @@ Game_web/
 │   │   ├── app.js               # SPA router, auth, leaderboard
 │   │   ├── ai-config.js         # Difficulty presets
 │   │   ├── game-icons.js        # Game card renderer
-│   │   ├── pong-rl-agent.js     # Generic PPO inference engine (shared by Pong, Boxing, SI)
+│   │   ├── pong-rl-agent.js     # Generic RL JSON inference engine (PPO + Rainbow)
 │   │   ├── gomoku-ai-worker.js  # Gomoku Alpha-Beta Worker
 │   │   └── games/
 │   │       ├── canvas-arena.js  # Canvas game mount helper
@@ -251,22 +266,24 @@ Game_web/
 │   │       ├── chess.js         # Chess + Stockfish UCI integration
 │   │       ├── boxing.js        # Boxing game engine + PPO integration
 │   │       ├── space-invaders-core.js  # Space Invaders game engine
-│   │       ├── space-invaders.js       # Dual-screen + PPO integration
+│   │       ├── space-invaders.js       # Dual-screen + Rainbow integration
 │   │       └── tetris.js        # Dual-screen Tetris + heuristic AI (self-contained)
-│   ├── models/                  # PPO weight JSON files (loaded directly by browser)
+│   ├── models/                  # RL weight JSON files (loaded directly by browser)
 │   │   ├── pong_mid.json        # Pong mid  (501,760 steps, 1.5 MB)
 │   │   ├── pong_best.json       # Pong best (665,600 steps, 1.5 MB)
 │   │   ├── boxing_mid.json      # Boxing mid  (501,760 steps, 1.6 MB)
 │   │   ├── boxing_best.json     # Boxing best (342,016 steps, 1.6 MB)
-│   │   ├── si_mid.json          # SI mid  (751,616 steps, 1.5 MB)
-│   │   └── si_best.json         # SI best (1,433,600 steps, 1.5 MB)
+│   │   ├── si_rainbow_mid.json  # Active SI Rainbow mid  (20,000 steps)
+│   │   ├── si_rainbow_best.json # Active SI Rainbow best (22,000 steps)
+│   │   ├── si_mid.json          # Legacy SI Simba checkpoint
+│   │   └── si_best.json         # Legacy SI Simba checkpoint
 │   ├── stockfish.js             # Stockfish 18 Lite Single WASM wrapper
 │   ├── stockfish.wasm           # Stockfish WASM binary (7 MB)
 │   └── img/chesspieces/wikipedia/  # Chess piece images (local, no CDN)
 │
 ├── pong_rl/                     # Pong RL training package
 │   ├── pong_env.py              # Game environment (mirrors JS physics)
-│   ├── ppo_agent.py             # ActorCritic PPO agent
+│   ├── ppo_agent.py             # SimbaV2 PPO agent wrapper
 │   ├── train.py                 # Training script
 │   ├── export_weights.py        # PyTorch → JSON export
 │   ├── play.py                  # Test a trained model
@@ -285,13 +302,18 @@ Game_web/
 │       └── best_model.pt
 │
 ├── space_invaders_rl/           # Space Invaders RL training package
-│   ├── space_invaders_env.py    # Game environment (mirrors JS physics)
-│   ├── ppo_agent.py
-│   ├── train.py
-│   ├── export_weights.py
-│   └── models/
-│       ├── mid_model.pt
-│       └── best_model.pt
+│   ├── rainbow_agent.py         # Rainbow DQN: C51, NoisyNet, PER, Double, Dueling
+│   ├── space_invaders_env.py    # Feature environment matching browser observations
+│   ├── train.py                 # Paper-setting Rainbow training script
+│   ├── export_weights.py        # PyTorch -> Rainbow browser JSON export
+│   ├── rainbow_models/          # Active Rainbow checkpoints + summary
+│   │   ├── mid_model.pt
+│   │   ├── best_model.pt
+│   │   └── training_summary.json
+│   ├── models/                  # Legacy Space Invaders checkpoints
+│   │   ├── mid_model.pt
+│   │   └── best_model.pt
+│   └── Rainbow/                 # Upstream Atari Rainbow reference implementation
 │
 ├── services/boxing/             # (Legacy) PettingZoo Boxing service — unused
 │   ├── boxing_web_service.py
@@ -336,60 +358,183 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Retraining RL Models
 
-You can retrain the PPO models from scratch or experiment with hyperparameters.
+You can retrain the SimbaV2 RL models from scratch or experiment with hyperparameters. The bundled `public/models/*.json` files may still be legacy MLP checkpoints until you run the training and export commands below.
 
 ### Python Environment
+
+This project has been smoke-tested with the local `gameai` conda environment:
+
+```bash
+conda create -n gameai python=3.10 -y
+conda activate gameai
+```
+
+If you use a different Python environment, install the dependencies first:
 
 ```bash
 pip install torch numpy
 ```
 
-CUDA is used automatically if a compatible GPU is available.
+CUDA is used automatically if a compatible GPU is available. Pong and Boxing default to PPO training. Space Invaders defaults to the Rainbow paper horizon: **50,000,000 agent steps**, equivalent to **200,000,000 frames** with frame skip 4. Shorter `--steps` runs keep the Rainbow paper hyperparameters locked, but shorten only the training horizon.
 
 ### Pong
 
+Pong uses self-play by default. The learner trains against a mixed opponent pool: rule bots, frozen historical snapshots, and best-evaluation snapshots. Use `--no-self-play` only if you want the older fixed-bot behavior.
+
 ```bash
 cd pong_rl
-python train.py --steps 1000000 --save-dir models
+python train.py --steps 10000000 --save-dir models \
+  --min-lr-ratio 0.05 \
+  --max-opponents 8 \
+  --self-play-warmup-episodes 25 \
+  --snapshot-interval-updates 25 \
+  --eval-interval-updates 10 \
+  --eval-episodes 24
 python export_weights.py --save-dir models --out-dir ../public/models
+cd ..
 ```
 
 ### Boxing
 
 ```bash
 cd boxing_rl
-python train.py --steps 1000000 --save-dir models
+python train.py --steps 10000000 --save-dir models --min-lr-ratio 0.05
 python export_weights.py --save-dir models --out-dir ../public/models
+cd ..
 ```
 
 ### Space Invaders
 
+Rainbow paper-locked settings used by `space_invaders_rl/train.py`:
+
+| Setting | Value |
+|---------|-------|
+| Min history before learning | 80,000 frames (`20,000` agent steps) |
+| Adam learning rate / epsilon | `6.25e-5` / `1.5e-4` |
+| Exploration | NoisyNet greedy policy, `epsilon=0`, `sigma0=0.5` |
+| Target network period | 32,000 frames (`8,000` agent steps) |
+| Prioritized replay | proportional, exponent `0.5`, beta `0.4 -> 1.0` |
+| Multi-step return | `n=3`, `gamma=0.99` |
+| Distributional support | 51 atoms over `[-10, 10]` |
+| Replay capacity / batch | `1,000,000` / `32` |
+
+Full paper-horizon training:
+
 ```bash
 cd space_invaders_rl
-python train.py --steps 1500000 --save-dir models
-python export_weights.py --save-dir models --out-dir ../public/models
+python train.py --save-dir rainbow_models
+python export_weights.py --save-dir rainbow_models --out-dir ../public/models --file-prefix si_rainbow
+cd ..
 ```
 
-After training, refresh the browser — no server restart needed.
+Verified short run used for the currently bundled Rainbow browser files:
+
+```bash
+cd space_invaders_rl
+python train.py --steps 22000 --eval-interval 1000 --eval-episodes 3 --save-dir rainbow_models
+python export_weights.py --save-dir rainbow_models --out-dir ../public/models --file-prefix si_rainbow
+cd ..
+```
+
+Current bundled Rainbow results:
+
+| File | Agent steps | Frames | Notes |
+|------|-------------|--------|-------|
+| `si_rainbow_mid.json` | 20,000 | 80,000 | Saved at Rainbow learn-start |
+| `si_rainbow_best.json` | 22,000 | 88,000 | Best 3-episode eval score: `663.33` |
+| `space_invaders_rl/rainbow_models/training_summary.json` | 22,000 | 88,000 | Last-20 train score: `425.5` |
+
+After training, refresh the browser. New exports include `"architecture": "rainbow_feature_c51"` and are loaded by the same in-browser `PongRLAgent`.
+
+### Train All RL Models
+
+From the repository root:
+
+```bash
+conda activate gameai
+
+cd pong_rl
+python train.py --steps 10000000 --save-dir models \
+  --min-lr-ratio 0.05 \
+  --max-opponents 8 \
+  --self-play-warmup-episodes 25 \
+  --snapshot-interval-updates 25 \
+  --eval-interval-updates 10 \
+  --eval-episodes 24
+python export_weights.py --save-dir models --out-dir ../public/models
+cd ..
+
+cd boxing_rl
+python train.py --steps 10000000 --save-dir models --min-lr-ratio 0.05
+python export_weights.py --save-dir models --out-dir ../public/models
+cd ..
+
+cd space_invaders_rl
+python train.py --save-dir rainbow_models
+python export_weights.py --save-dir rainbow_models --out-dir ../public/models --file-prefix si_rainbow
+cd ..
+```
 
 #### Checkpoint Saving
 
 | File | Saved when |
 |------|-----------|
 | `mid_model.pt` | At the 50% step mark |
-| `best_model.pt` | Whenever the last-50-episode average reward hits a new high |
+| `best_model.pt` | Whenever the last-50-episode average game score hits a new high |
 
 #### Model JSON Structure
 
+Space Invaders Rainbow exports use this structure:
+
 ```json
 {
+  "architecture": "rainbow_feature_c51",
+  "obs_dim": 20,
+  "act_dim": 6,
+  "atoms": 51,
+  "v_min": -10.0,
+  "v_max": 10.0,
+  "support": [...],
+  "layers": {
+    "fc": { "weight": [[...]], "bias": [...] },
+    "value_hidden": { "weight": [[...]], "bias": [...] },
+    "value_out": { "weight": [[...]], "bias": [...] },
+    "adv_hidden": { "weight": [[...]], "bias": [...] },
+    "adv_out": { "weight": [[...]], "bias": [...] }
+  },
+  "paper_locked": { "min_history_to_start_learning_frames": 80000 },
+  "meta": { "total_steps": 22000, "training_frames": 88000, "architecture": "rainbow_feature_c51" }
+}
+```
+
+SimbaV2 PPO exports for Pong and Boxing use this structure:
+
+```json
+{
+  "architecture": "simba_v2_discrete",
+  "obs_dim": 14,
+  "act_dim": 18,
+  "obs_mean": [...],
+  "obs_var": [...],
+  "embed": { "w": [[...]], "scale": [...] },
+  "blocks": [{ "mlp": { "w1": [[...]], "scale": [...], "w2": [[...]] }, "alpha": [...] }],
+  "actor": { "w1": [[...]], "scale": [...], "w2": [[...]], "bias": [...] },
+  "meta": { "total_steps": 10000000, "updates": 4882, "architecture": "simba_v2_discrete" }
+}
+```
+
+Legacy bundled checkpoints are still supported and look like this:
+
+```json
+{
+  "architecture": "legacy_mlp",
   "shared_0_weight": [[...], ...],   // Linear(obs_dim → 256) weights
   "shared_0_bias":   [...],
   "shared_2_weight": [[...], ...],   // Linear(256 → 256) weights
   "shared_2_bias":   [...],
   "actor_weight":    [[...], ...],   // Linear(256 → act_dim) weights
   "actor_bias":      [...],
-  "meta": { "total_steps": 665600, "updates": 325, "obs_dim": 6, "act_dim": 3 }
+  "meta": { "total_steps": 10000000, "updates": 4882, "obs_dim": 6, "act_dim": 3 }
 }
 ```
 
@@ -404,7 +549,7 @@ After training, refresh the browser — no server restart needed.
 | Vanilla JS (ES2020+) | SPA router, all game logic |
 | HTML5 Canvas | Pong, Boxing, Space Invaders, Tetris, Gomoku rendering |
 | Web Workers | Gomoku AI async search |
-| Fetch API | PPO model JSON loading, REST API calls |
+| Fetch API | RL model JSON loading, REST API calls |
 | chessboard.js + chess.js | Chess UI and rule validation (CDN) |
 | p5.js | Gomoku canvas rendering (CDN) |
 
@@ -419,7 +564,7 @@ After training, refresh the browser — no server restart needed.
 
 | Technology | Purpose |
 |-----------|---------|
-| PyTorch | PPO agent training |
+| PyTorch | PPO and Rainbow DQN agent training |
 | NumPy | Environment simulation |
 | Stockfish 18 WASM | Chess engine (runs in-browser) |
 

@@ -2,14 +2,14 @@
  * Space Invaders (Taito, 1978) — Dual-Screen PvAI
  *
  * Left screen  : Player 1 (human, keyboard)
- * Right screen : Player 2 (PPO AI agent)
+ * Right screen : Player 2 (Rainbow DQN AI agent)
  *
  * Both games run simultaneously in real-time.
  *
  * AI difficulty → model:
  *   easy   — random policy
- *   medium — si_mid.json  (PPO ~50% training)
- *   hell   — si_best.json (PPO best reward)
+ *   medium — si_rainbow_mid.json  (Rainbow mid checkpoint)
+ *   hell   — si_rainbow_best.json (Rainbow best checkpoint)
  */
 
 // ── Observation builder (mirrors space_invaders_env.py) ────────────────────
@@ -80,6 +80,69 @@ function decodeSIAction(action) {
     return { left: action===1||action===4, right: action===2||action===5, fire: action>=3 };
 }
 
+function encodeSIAction(left, right, fire) {
+    if (left && right) { left = false; right = false; }
+    if (fire && left) return 4;
+    if (fire && right) return 5;
+    if (fire) return 3;
+    if (left) return 1;
+    if (right) return 2;
+    return 0;
+}
+
+function enhanceSIAction(obs, modelAction, difficulty) {
+    const W = 224;
+    const pcx = obs[0] * W;
+    const bulletAlive = obs[1] > 0.5;
+    const nearestDx = obs[16] * W;
+    const bottom = obs[7];
+    const lives = obs[18] * 3;
+    const model = decodeSIAction(modelAction);
+    let left = model.left;
+    let right = model.right;
+    let fire = model.fire;
+
+    let danger = null;
+    for (let i = 10; i <= 14; i += 2) {
+        const dx = obs[i] * W;
+        const y = obs[i + 1];
+        if (y <= 0) continue;
+        const closeLane = Math.abs(dx) < (difficulty === 'hell' ? 13 : 10);
+        const urgent = y > (difficulty === 'hell' ? 0.58 : 0.66);
+        if (closeLane && urgent && (!danger || y > danger.y)) danger = { dx, y };
+    }
+
+    if (danger) {
+        const moveLeft = danger.dx >= 0;
+        left = moveLeft && pcx > 10;
+        right = !moveLeft && pcx < W - 10;
+        if (!left && !right) {
+            left = pcx > W / 2;
+            right = !left;
+        }
+        fire = false;
+        return encodeSIAction(left, right, fire);
+    }
+
+    const aimTolerance = difficulty === 'hell' ? 3.5 : 5.5;
+    if (!bulletAlive) {
+        if (Math.abs(nearestDx) <= aimTolerance) {
+            left = false;
+            right = false;
+            fire = true;
+        } else {
+            left = nearestDx < 0 && pcx > 7;
+            right = nearestDx > 0 && pcx < W - 7;
+            fire = fire && Math.abs(nearestDx) < aimTolerance * 2.2;
+        }
+    } else if (bottom > 0.72 || lives <= 1.05) {
+        left = nearestDx < -aimTolerance && pcx > 7;
+        right = nearestDx > aimTolerance && pcx < W - 7;
+    }
+
+    return encodeSIAction(left, right, fire);
+}
+
 // ── Agent cache ────────────────────────────────────────────────────────────
 window._siAgents = window._siAgents || {};
 async function loadSIAgent(key, url) {
@@ -103,19 +166,34 @@ function mountDualSI(container, ctx, aiController) {
     const { Game, CONFIG } = window.SpaceInvadersBrowserGame;
     let p1Score = 0, p2Score = 0;
     let p1Done = false, p2Done = false;
+    let matchEnded = false;
+    let l1 = null, l2 = null;
 
-    const checkBothDone = () => {
-        if (p1Done && p2Done) {
-            ctx.onEnd({
-                playerScore: p1Score,
-                aiScore:     p2Score,
-                message: p1Score > p2Score
-                    ? `You win! You ${p1Score} — AI ${p2Score}`
-                    : p2Score > p1Score
-                    ? `AI wins! AI ${p2Score} — You ${p1Score}`
-                    : `Draw! Both scored ${p1Score}`,
-            });
+    const resultMessage = () => p1Score > p2Score
+        ? `You win! You ${p1Score} — AI ${p2Score}`
+        : p2Score > p1Score
+        ? `AI wins! AI ${p2Score} — You ${p1Score}`
+        : `Draw! Both scored ${p1Score}`;
+
+    const finishMatch = () => {
+        if (matchEnded) return;
+        matchEnded = true;
+        l1?.stop();
+        l2?.stop();
+        ctx.onEnd({
+            playerScore: p1Score,
+            aiScore:     p2Score,
+            message: resultMessage(),
+        });
+    };
+
+    const checkEnd = () => {
+        if (matchEnded) return;
+        if (p1Done && p2Score > p1Score) {
+            finishMatch();
+            return;
         }
+        if (p1Done && p2Done) finishMatch();
     };
 
     // ── Layout ──────────────────────────────────────────────────────────
@@ -149,11 +227,11 @@ function mountDualSI(container, ctx, aiController) {
                 p1Score = score;
                 if (p1Done) return; p1Done = true;
                 ctx.onScore(p1Score, p2Score);
-                checkBothDone();
+                checkEnd();
             },
         },
     });
-    const l1 = CanvasArena.runLoop(g1, () => g1.renderer.render(g1.getState()), CONFIG);
+    l1 = CanvasArena.runLoop(g1, () => g1.renderer.render(g1.getState()), CONFIG);
 
     // ── Player 2 game (AI) ───────────────────────────────────────────────
     const c2 = document.getElementById('si-canvas-p2');
@@ -161,12 +239,12 @@ function mountDualSI(container, ctx, aiController) {
     const g2 = new Game(c2, {
         autoStart: true,
         hooks: {
-            onScore(score) { p2Score = score; ctx.onScore(p1Score, p2Score); },
+            onScore(score) { p2Score = score; ctx.onScore(p1Score, p2Score); checkEnd(); },
             onGameOver(score, hi, wave) {
                 p2Score = score;
                 if (p2Done) return; p2Done = true;
                 ctx.onScore(p1Score, p2Score);
-                checkBothDone();
+                checkEnd();
             },
         },
     });
@@ -176,20 +254,22 @@ function mountDualSI(container, ctx, aiController) {
         const ctrl = makeRandomCtrl();
         g2._aiInput = () => ctrl();
     } else if (aiController) {
-        // Throttle: decide every 8 frames (~133 ms at 60 fps)
+        // Fast model cadence plus per-frame tactical guard for bomb dodging.
         let siFrame = 0;
+        let siLastAction = 0;
         let siLastCtrl = null;
+        const decisionStride = ctx.difficulty === 'hell' ? 2 : 4;
         g2._aiInput = (state) => {
-            siFrame = (siFrame + 1) % 8;
-            if (siFrame !== 0) return siLastCtrl;
             const obs = buildSIObs(state, g2);
             if (!obs) return siLastCtrl;
-            siLastCtrl = decodeSIAction(aiController.predict(obs));
+            siFrame = (siFrame + 1) % decisionStride;
+            if (siFrame === 0) siLastAction = aiController.predict(obs);
+            siLastCtrl = decodeSIAction(enhanceSIAction(obs, siLastAction, ctx.difficulty || 'medium'));
             return siLastCtrl;
         };
     }
 
-    const l2 = CanvasArena.runLoop(g2, () => g2.renderer.render(g2.getState()), CONFIG);
+    l2 = CanvasArena.runLoop(g2, () => g2.renderer.render(g2.getState()), CONFIG);
 
     ctx.onScore(0, 0);
 
@@ -215,10 +295,10 @@ const SpaceInvadersGame = {
             return;
         }
 
-        const url = difficulty === 'hell' ? '/models/si_best.json' : '/models/si_mid.json';
+        const url = difficulty === 'hell' ? '/models/si_rainbow_best.json' : '/models/si_rainbow_mid.json';
         container.innerHTML =
             '<div style="text-align:center;padding:60px;color:#aaa;font-size:14px">' +
-            'Loading PPO model…</div>';
+            'Loading Rainbow model…</div>';
 
         loadSIAgent(difficulty, url).then(agent => {
             this._runtime = mountDualSI(container, ctx, agent);

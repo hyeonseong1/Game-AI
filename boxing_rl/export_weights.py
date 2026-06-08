@@ -4,31 +4,18 @@ Usage:
     python export_weights.py --save-dir models --out-dir ../public/models
 """
 import argparse, json, os, sys
-import torch
+from pathlib import Path
 from boxing_env import OBS_DIM, ACT_DIM
-from ppo_agent import PPOAgent
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from rl_common import checkpoint_to_json
 
 
 def model_to_json(path: str) -> dict:
-    ckpt = torch.load(path, map_location='cpu', weights_only=False)
-    sd   = ckpt['policy']
-
-    def t(key): return sd[key].numpy().tolist()
-
-    return {
-        'shared_0_weight': t('shared.0.weight'),
-        'shared_0_bias':   t('shared.0.bias'),
-        'shared_2_weight': t('shared.2.weight'),
-        'shared_2_bias':   t('shared.2.bias'),
-        'actor_weight':    t('actor_head.weight'),
-        'actor_bias':      t('actor_head.bias'),
-        'meta': {
-            'total_steps': int(ckpt.get('total_steps', 0)),
-            'updates':     int(ckpt.get('updates', 0)),
-            'obs_dim':     OBS_DIM,
-            'act_dim':     ACT_DIM,
-        },
-    }
+    return checkpoint_to_json(path, state_dim=OBS_DIM, action_dim=ACT_DIM)
 
 
 def main():

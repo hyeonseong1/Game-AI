@@ -1,5 +1,16 @@
 {
-  "users": [],
+  "users": [
+    {
+      "userId": "admin",
+      "password": "admin",
+      "createdAt": "2026-06-05T13:43:51.260Z"
+    },
+    {
+      "userId": "admin2",
+      "password": "adminadmin",
+      "createdAt": "2026-06-05T13:44:42.042Z"
+    }
+  ],
   "leaderboard": [
     {
       "id": "seed-1",
@@ -45,21 +56,57 @@
       "score": 0,
       "aiPercent": 50,
       "createdAt": "2026-05-17T13:50:54.540Z"
+    },
+    {
+      "id": "lb-edcd280aedbc",
+      "username": "admin2",
+      "game": "gomoku",
+      "difficulty": "medium",
+      "score": 1,
+      "aiPercent": 100,
+      "createdAt": "2026-06-05T13:51:20.785Z"
+    },
+    {
+      "id": "lb-a2b02a5ff56b",
+      "username": "admin2",
+      "game": "gomoku",
+      "difficulty": "easy",
+      "score": 1,
+      "aiPercent": 100,
+      "createdAt": "2026-06-07T23:53:01.584Z"
     }
   ],
   "community": [
+    {
+      "id": "post-f5cbcd17c9fd",
+      "username": "admin2",
+      "avatar": "A",
+      "content": "This is example.",
+      "likes": 0,
+      "likedBy": [],
+      "comments": [],
+      "createdAt": "2026-06-05T13:52:57.082Z"
+    },
     {
       "id": "post-1",
       "username": "TetrisPro",
       "avatar": "T",
       "content": "For Tetris Hell difficulty, try to keep your stack flat and save the I-piece for emergencies. The AI clears 4-lines constantly!",
-      "likes": 12,
-      "likedBy": [],
+      "likes": 13,
+      "likedBy": [
+        "admin2"
+      ],
       "comments": [
         {
           "id": "c1",
           "username": "Guest4335",
           "content": "Thanks for the tip!"
+        },
+        {
+          "id": "c-3ddc1bf09de6",
+          "username": "admin2",
+          "content": "thank u",
+          "createdAt": "2026-06-05T13:52:42.166Z"
         }
       ],
       "createdAt": "2026-05-15T10:00:00.000Z"
@@ -71,7 +118,14 @@
       "content": "Pong medium AI is beatable if you angle your returns toward the corners. Anyone else tried hell mode?",
       "likes": 8,
       "likedBy": [],
-      "comments": [],
+      "comments": [
+        {
+          "id": "c-c09b11d010dd",
+          "username": "admin2",
+          "content": "hello",
+          "createdAt": "2026-06-05T13:52:46.566Z"
+        }
+      ],
       "createdAt": "2026-05-16T08:20:00.000Z"
     }
   ]

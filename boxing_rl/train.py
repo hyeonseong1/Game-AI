@@ -2,8 +2,8 @@
 PPO Boxing Training Script
 ==========================
 Usage:
-    python train.py               # default 1,000,000 steps
-    python train.py --steps 500000
+    python train.py               # default 10,000,000 steps
+    python train.py --steps 10000000
 
 Saves:
     models/mid_model.pt   — checkpoint at the halfway point
@@ -17,17 +17,30 @@ from boxing_env import BoxingEnv, OBS_DIM, ACT_DIM
 from ppo_agent import PPOAgent
 
 
-def train(total_steps: int = 1_000_000, save_dir: str = 'models') -> PPOAgent:
+def train(
+    total_steps: int = 10_000_000,
+    save_dir: str = 'models',
+    lr_decay: bool = True,
+    min_lr_ratio: float = 0.05,
+) -> PPOAgent:
     os.makedirs(save_dir, exist_ok=True)
 
-    env   = BoxingEnv(opponent='medium')
-    agent = PPOAgent(state_dim=OBS_DIM, action_dim=ACT_DIM, rollout_size=2048)
+    opponent_pool = ('medium', 'hard')
+    opponent_probs = (0.35, 0.65)
+    env   = BoxingEnv(opponent=np.random.choice(opponent_pool, p=opponent_probs))
+    agent = PPOAgent(state_dim=OBS_DIM, action_dim=ACT_DIM, rollout_size=2048,
+                     value_min=-50.0, value_max=180.0,
+                     total_training_steps=total_steps,
+                     lr_decay=lr_decay,
+                     min_lr_ratio=min_lr_ratio)
 
     print(f"\n{'='*60}")
-    print(f"  PPO Boxing Training")
+    print(f"  SimbaV2 PPO Boxing Training")
     print(f"  Device    : {agent.device}")
     print(f"  State dim : {OBS_DIM}   Action dim: {ACT_DIM}")
     print(f"  Total steps: {total_steps:,}")
+    print(f"  LR decay   : {'linear' if lr_decay else 'off'} "
+          f"(base={agent.base_lr:.2e}, min={agent.base_lr * min_lr_ratio:.2e})")
     print(f"  Mid model  : step {total_steps//2:,}")
     print(f"{'='*60}\n")
 
@@ -53,6 +66,7 @@ def train(total_steps: int = 1_000_000, save_dir: str = 'models') -> PPOAgent:
             ep_rewards.append(ep_reward)
             ep_count += 1
             ep_reward = 0.0
+            env = BoxingEnv(opponent=np.random.choice(opponent_pool, p=opponent_probs))
             state = env.reset()
 
         if agent.buffer.ready():
@@ -84,6 +98,7 @@ def train(total_steps: int = 1_000_000, save_dir: str = 'models') -> PPOAgent:
                       f"ep {ep_count:5d} | "
                       f"avg50 {avg:+7.3f} | "
                       f"loss {loss:.4f} | "
+                      f"lr {loss.lr:.2e} | "
                       f"ETA {eta/60:.1f}m")
 
     # ── safety fallbacks ──
@@ -101,7 +116,14 @@ def train(total_steps: int = 1_000_000, save_dir: str = 'models') -> PPOAgent:
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
-    ap.add_argument('--steps',    type=int, default=1_000_000)
+    ap.add_argument('--steps',    type=int, default=10_000_000)
     ap.add_argument('--save-dir', default='models')
+    ap.add_argument('--no-lr-decay', action='store_true')
+    ap.add_argument('--min-lr-ratio', type=float, default=0.05)
     args = ap.parse_args()
-    train(total_steps=args.steps, save_dir=args.save_dir)
+    train(
+        total_steps=args.steps,
+        save_dir=args.save_dir,
+        lr_decay=not args.no_lr_decay,
+        min_lr_ratio=args.min_lr_ratio,
+    )
