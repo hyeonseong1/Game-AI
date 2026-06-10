@@ -279,7 +279,8 @@ Game_web/
 │   │   └── si_best.json         # Legacy SI Simba checkpoint
 │   ├── stockfish.js             # Stockfish 18 Lite Single WASM wrapper
 │   ├── stockfish.wasm           # Stockfish WASM binary (7 MB)
-│   └── img/chesspieces/wikipedia/  # Chess piece images (local, no CDN)
+│   ├── img/chesspieces/wikipedia/  # Chess piece images (local, no CDN)
+│   └── jstetris/                # (Legacy) iframe Tetris source — unused
 │
 ├── pong_rl/                     # Pong RL training package
 │   ├── pong_env.py              # Game environment (mirrors JS physics)
@@ -315,15 +316,16 @@ Game_web/
 │   │   └── best_model.pt
 │   └── Rainbow/                 # Upstream Atari Rainbow reference implementation
 │
+├── rl_common/                   # Shared PPO implementation (Pong & Boxing)
+│   ├── simba_ppo.py             # SimbaV2 ActorCritic network + PPO update
+│   └── __init__.py
+│
 ├── services/boxing/             # (Legacy) PettingZoo Boxing service — unused
 │   ├── boxing_web_service.py
 │   └── requirements.txt
 │
-├── data/
-│   └── db.json                  # Leaderboard + community data (JSON)
-│
-└── jstetris/                    # (Legacy) iframe Tetris source — unused
-    └── ...
+└── data/
+    └── db.json                  # Leaderboard + community data (JSON)
 ```
 
 ---
@@ -372,7 +374,7 @@ conda activate gameai
 If you use a different Python environment, install the dependencies first:
 
 ```bash
-pip install torch numpy
+pip install torch numpy pygame
 ```
 
 CUDA is used automatically if a compatible GPU is available. Pong and Boxing default to PPO training. Space Invaders defaults to the Rainbow paper horizon: **50,000,000 agent steps**, equivalent to **200,000,000 frames** with frame skip 4. Shorter `--steps` runs keep the Rainbow paper hyperparameters locked, but shorten only the training horizon.
@@ -441,8 +443,8 @@ Current bundled Rainbow results:
 | File | Agent steps | Frames | Notes |
 |------|-------------|--------|-------|
 | `si_rainbow_mid.json` | 20,000 | 80,000 | Saved at Rainbow learn-start |
-| `si_rainbow_best.json` | 22,000 | 88,000 | Best 3-episode eval score: `663.33` |
-| `space_invaders_rl/rainbow_models/training_summary.json` | 22,000 | 88,000 | Last-20 train score: `425.5` |
+| `si_rainbow_best.json` | 22,000 | 88,000 | Best 3-episode eval score: `466.67` |
+| `space_invaders_rl/rainbow_models/training_summary.json` | 22,000 | 88,000 | Last-20 train score: `378.5` |
 
 After training, refresh the browser. New exports include `"architecture": "rainbow_feature_c51"` and are loaded by the same in-browser `PongRLAgent`.
 
